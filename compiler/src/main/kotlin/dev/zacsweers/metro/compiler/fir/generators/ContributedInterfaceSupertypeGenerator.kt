@@ -25,6 +25,7 @@ import dev.zacsweers.metro.compiler.fir.resolvedExcludedClassIds
 import dev.zacsweers.metro.compiler.fir.resolvedReplacedClassIds
 import dev.zacsweers.metro.compiler.fir.resolvedScopeClassId
 import dev.zacsweers.metro.compiler.fir.scopeArgument
+import dev.zacsweers.metro.compiler.getAndAdd
 import dev.zacsweers.metro.compiler.singleOrError
 import dev.zacsweers.metro.compiler.symbols.Symbols
 import java.util.Optional
@@ -299,7 +300,7 @@ internal class ContributedInterfaceSupertypeGenerator(session: FirSession) :
         val localTypeResolver = typeResolverFor(parentSymbol) ?: continue
 
         parentSymbol.originClassId(session, localTypeResolver)?.let { originClassId ->
-          originToContributions.getOrPut(originClassId) { mutableSetOf() }.add(parentClassId)
+          originToContributions.getAndAdd(originClassId, parentClassId)
         }
       }
     }
@@ -313,7 +314,7 @@ internal class ContributedInterfaceSupertypeGenerator(session: FirSession) :
           val localTypeResolver = typeResolverFor(containerSymbol) ?: continue
 
           containerSymbol.originClassId(session, localTypeResolver)?.let { originClassId ->
-            originToContributions.getOrPut(originClassId) { mutableSetOf() }.add(containerClassId)
+            originToContributions.getAndAdd(originClassId, containerClassId)
           }
         }
       }
