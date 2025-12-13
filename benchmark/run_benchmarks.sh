@@ -836,8 +836,9 @@ EOF
                 if [ "$mode" = "metro" ]; then
                     vs_metro1="baseline"
                 elif [ -n "$metro_score1" ] && [ "$metro_score1" != "0" ]; then
-                    local pct1=$(echo "scale=1; (($score1 - $metro_score1) / $metro_score1) * 100" | bc 2>/dev/null | sed 's/\.0$//' || echo "")
-                    local mult1=$(echo "scale=1; $score1 / $metro_score1" | bc 2>/dev/null || echo "")
+                    local pct1_raw=$(echo "scale=6; (($score1 - $metro_score1) / $metro_score1) * 100" | bc 2>/dev/null || echo "")
+                    local pct1=$(printf "%.1f" "$pct1_raw" 2>/dev/null | sed 's/\.0$//' || echo "$pct1_raw")
+                    local mult1=$(echo "scale=2; $score1 / $metro_score1" | bc 2>/dev/null || echo "")
                     if [ -n "$pct1" ] && [ -n "$mult1" ]; then
                         vs_metro1="+${pct1}% (${mult1}x)"
                     fi
@@ -854,8 +855,9 @@ EOF
                     if [ "$mode" = "metro" ]; then
                         vs_metro2="baseline"
                     elif [ -n "$metro_score2" ] && [ "$metro_score2" != "0" ]; then
-                        local pct2=$(echo "scale=1; (($score2 - $metro_score2) / $metro_score2) * 100" | bc 2>/dev/null | sed 's/\.0$//' || echo "")
-                        local mult2=$(echo "scale=1; $score2 / $metro_score2" | bc 2>/dev/null || echo "")
+                        local pct2_raw=$(echo "scale=6; (($score2 - $metro_score2) / $metro_score2) * 100" | bc 2>/dev/null || echo "")
+                        local pct2=$(printf "%.1f" "$pct2_raw" 2>/dev/null | sed 's/\.0$//' || echo "$pct2_raw")
+                        local mult2=$(echo "scale=2; $score2 / $metro_score2" | bc 2>/dev/null || echo "")
                         if [ -n "$pct2" ] && [ -n "$mult2" ]; then
                             vs_metro2="+${pct2}% (${mult2}x)"
                         fi
@@ -863,12 +865,14 @@ EOF
                 fi
 
                 if [ -n "$score1" ] && [ -n "$score2" ] && [ "$score1" != "0" ]; then
-                    local pct=$(echo "scale=2; (($score2 - $score1) / $score1) * 100" | bc 2>/dev/null || echo "")
+                    # Use scale=6 for intermediate precision, then format to 2 decimal places
+                    local pct_raw=$(echo "scale=6; (($score2 - $score1) / $score1) * 100" | bc 2>/dev/null || echo "")
+                    local pct=$(printf "%.2f" "$pct_raw" 2>/dev/null || echo "$pct_raw")
                     if [ -n "$pct" ]; then
                         # Check if negative (faster)
                         if [[ "$pct" == -* ]]; then
                             diff="${pct}%"
-                        elif [[ "$pct" == "0" ]] || [[ "$pct" == "0.00" ]] || [[ "$pct" == ".00" ]]; then
+                        elif [[ "$pct" == "0.00" ]] || [[ "$pct" == "0" ]] || [[ "$pct" == ".00" ]]; then
                             diff="+0.00% (no change)"
                         else
                             diff="+${pct}%"
@@ -1013,8 +1017,8 @@ function formatTime(ms) {
 function calculateVsBaseline(value, baselineValue) {
     if (!value || !baselineValue) return { text: '—', class: '' };
     if (value === baselineValue) return { text: 'baseline', class: 'baseline' };
-    const pct = ((value - baselineValue) / baselineValue * 100).toFixed(0);
-    const mult = (value / baselineValue).toFixed(1);
+    const pct = ((value - baselineValue) / baselineValue * 100).toFixed(1);
+    const mult = (value / baselineValue).toFixed(2);
     if (pct < 0) {
         return { text: `${pct}% (${mult}x)`, class: 'faster' };
     }
@@ -1409,8 +1413,9 @@ EOF
                 if [ "$mode" = "metro" ]; then
                     vs_metro="baseline"
                 elif [ -n "$metro_score" ] && [ "$metro_score" != "0" ]; then
-                    local pct=$(echo "scale=1; (($score - $metro_score) / $metro_score) * 100" | bc 2>/dev/null | sed 's/\.0$//' || echo "")
-                    local mult=$(echo "scale=1; $score / $metro_score" | bc 2>/dev/null || echo "")
+                    local pct_raw=$(echo "scale=6; (($score - $metro_score) / $metro_score) * 100" | bc 2>/dev/null || echo "")
+                    local pct=$(printf "%.1f" "$pct_raw" 2>/dev/null | sed 's/\.0$//' || echo "$pct_raw")
+                    local mult=$(echo "scale=2; $score / $metro_score" | bc 2>/dev/null || echo "")
                     if [ -n "$pct" ] && [ -n "$mult" ]; then
                         vs_metro="+${pct}% (${mult}x)"
                     fi

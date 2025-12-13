@@ -2000,8 +2000,8 @@ EOF
                 if [ "$mode" = "metro" ]; then
                     vs_metro1="baseline"
                 elif [ -n "$metro_jvm_score1" ] && [ "$metro_jvm_score1" != "0" ]; then
-                    local pct1=$(printf "%.0f" "$(echo "scale=4; ($score1 / $metro_jvm_score1) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                    local mult1=$(printf "%.1f" "$(echo "scale=4; $score1 / $metro_jvm_score1" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local pct1=$(printf "%.1f" "$(echo "scale=4; ($score1 / $metro_jvm_score1) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local mult1=$(printf "%.2f" "$(echo "scale=4; $score1 / $metro_jvm_score1" | bc 2>/dev/null)" 2>/dev/null || echo "")
                     if [ -n "$pct1" ] && [ -n "$mult1" ]; then
                         vs_metro1="+${pct1}% (${mult1}x)"
                     fi
@@ -2013,8 +2013,8 @@ EOF
                 if [ "$mode" = "metro" ]; then
                     vs_metro2="baseline"
                 elif [ -n "$metro_jvm_score2" ] && [ "$metro_jvm_score2" != "0" ]; then
-                    local pct2=$(printf "%.0f" "$(echo "scale=4; ($score2 / $metro_jvm_score2) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                    local mult2=$(printf "%.1f" "$(echo "scale=4; $score2 / $metro_jvm_score2" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local pct2=$(printf "%.1f" "$(echo "scale=4; ($score2 / $metro_jvm_score2) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local mult2=$(printf "%.2f" "$(echo "scale=4; $score2 / $metro_jvm_score2" | bc 2>/dev/null)" 2>/dev/null || echo "")
                     if [ -n "$pct2" ] && [ -n "$mult2" ]; then
                         vs_metro2="+${pct2}% (${mult2}x)"
                     fi
@@ -2104,8 +2104,8 @@ EOF
                     if [ "$mode" = "metro" ]; then
                         vs_metro1="baseline"
                     elif [ -n "$metro_jvm_r8_score1" ] && [ "$metro_jvm_r8_score1" != "0" ]; then
-                        local pct1=$(printf "%.0f" "$(echo "scale=4; ($score1 / $metro_jvm_r8_score1) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                        local mult1=$(printf "%.1f" "$(echo "scale=4; $score1 / $metro_jvm_r8_score1" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                        local pct1=$(printf "%.1f" "$(echo "scale=4; ($score1 / $metro_jvm_r8_score1) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                        local mult1=$(printf "%.2f" "$(echo "scale=4; $score1 / $metro_jvm_r8_score1" | bc 2>/dev/null)" 2>/dev/null || echo "")
                         if [ -n "$pct1" ] && [ -n "$mult1" ]; then
                             vs_metro1="+${pct1}% (${mult1}x)"
                         fi
@@ -2116,8 +2116,8 @@ EOF
                     if [ "$mode" = "metro" ]; then
                         vs_metro2="baseline"
                     elif [ -n "$metro_jvm_r8_score2" ] && [ "$metro_jvm_r8_score2" != "0" ]; then
-                        local pct2=$(printf "%.0f" "$(echo "scale=4; ($score2 / $metro_jvm_r8_score2) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                        local mult2=$(printf "%.1f" "$(echo "scale=4; $score2 / $metro_jvm_r8_score2" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                        local pct2=$(printf "%.1f" "$(echo "scale=4; ($score2 / $metro_jvm_r8_score2) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                        local mult2=$(printf "%.2f" "$(echo "scale=4; $score2 / $metro_jvm_r8_score2" | bc 2>/dev/null)" 2>/dev/null || echo "")
                         if [ -n "$pct2" ] && [ -n "$mult2" ]; then
                             vs_metro2="+${pct2}% (${mult2}x)"
                         fi
@@ -2207,8 +2207,8 @@ EOF
                     if [ "$mode" = "metro" ]; then
                         vs_metro1="baseline"
                     elif [ -n "$metro_macro_score1" ] && [ "$metro_macro_score1" != "0" ]; then
-                        local pct1=$(printf "%.0f" "$(echo "scale=4; ($score1 / $metro_macro_score1) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                        local mult1=$(printf "%.1f" "$(echo "scale=4; $score1 / $metro_macro_score1" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                        local pct1=$(printf "%.1f" "$(echo "scale=4; ($score1 / $metro_macro_score1) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                        local mult1=$(printf "%.2f" "$(echo "scale=4; $score1 / $metro_macro_score1" | bc 2>/dev/null)" 2>/dev/null || echo "")
                         if [ -n "$pct1" ] && [ -n "$mult1" ]; then
                             vs_metro1="+${pct1}% (${mult1}x)"
                         fi
@@ -2220,8 +2220,8 @@ EOF
                     if [ "$mode" = "metro" ]; then
                         vs_metro2="baseline"
                     elif [ -n "$metro_macro_score2" ] && [ "$metro_macro_score2" != "0" ]; then
-                        local pct2=$(printf "%.0f" "$(echo "scale=4; ($score2 / $metro_macro_score2) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                        local mult2=$(printf "%.1f" "$(echo "scale=4; $score2 / $metro_macro_score2" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                        local pct2=$(printf "%.1f" "$(echo "scale=4; ($score2 / $metro_macro_score2) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                        local mult2=$(printf "%.2f" "$(echo "scale=4; $score2 / $metro_macro_score2" | bc 2>/dev/null)" 2>/dev/null || echo "")
                         if [ -n "$pct2" ] && [ -n "$mult2" ]; then
                             vs_metro2="+${pct2}% (${mult2}x)"
                         fi
@@ -2298,8 +2298,8 @@ EOF
                 if [ "$mode" = "metro" ]; then
                     vs_metro1="baseline"
                 elif [ -n "$metro_micro_score1" ] && [ "$metro_micro_score1" != "0" ]; then
-                    local pct1=$(printf "%.0f" "$(echo "scale=4; ($score1 / $metro_micro_score1) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                    local mult1=$(printf "%.1f" "$(echo "scale=4; $score1 / $metro_micro_score1" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local pct1=$(printf "%.1f" "$(echo "scale=4; ($score1 / $metro_micro_score1) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local mult1=$(printf "%.2f" "$(echo "scale=4; $score1 / $metro_micro_score1" | bc 2>/dev/null)" 2>/dev/null || echo "")
                     if [ -n "$pct1" ] && [ -n "$mult1" ]; then
                         vs_metro1="+${pct1}% (${mult1}x)"
                     fi
@@ -2311,8 +2311,8 @@ EOF
                 if [ "$mode" = "metro" ]; then
                     vs_metro2="baseline"
                 elif [ -n "$metro_micro_score2" ] && [ "$metro_micro_score2" != "0" ]; then
-                    local pct2=$(printf "%.0f" "$(echo "scale=4; ($score2 / $metro_micro_score2) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                    local mult2=$(printf "%.1f" "$(echo "scale=4; $score2 / $metro_micro_score2" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local pct2=$(printf "%.1f" "$(echo "scale=4; ($score2 / $metro_micro_score2) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local mult2=$(printf "%.2f" "$(echo "scale=4; $score2 / $metro_micro_score2" | bc 2>/dev/null)" 2>/dev/null || echo "")
                     if [ -n "$pct2" ] && [ -n "$mult2" ]; then
                         vs_metro2="+${pct2}% (${mult2}x)"
                     fi
@@ -2731,8 +2731,8 @@ EOF
                 if [ "$mode" = "metro" ]; then
                     vs_metro="baseline"
                 elif [ -n "$metro_jvm_score" ] && [ "$metro_jvm_score" != "0" ]; then
-                    local pct=$(printf "%.0f" "$(echo "scale=4; ($score / $metro_jvm_score) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                    local mult=$(printf "%.1f" "$(echo "scale=4; $score / $metro_jvm_score" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local pct=$(printf "%.1f" "$(echo "scale=4; ($score / $metro_jvm_score) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local mult=$(printf "%.2f" "$(echo "scale=4; $score / $metro_jvm_score" | bc 2>/dev/null)" 2>/dev/null || echo "")
                     if [ -n "$pct" ] && [ -n "$mult" ]; then
                         vs_metro="+${pct}% (${mult}x)"
                     fi
@@ -2782,8 +2782,8 @@ EOF
                 if [ "$mode" = "metro" ]; then
                     vs_metro="baseline"
                 elif [ -n "$metro_jvm_r8_score" ] && [ "$metro_jvm_r8_score" != "0" ]; then
-                    local pct=$(printf "%.0f" "$(echo "scale=4; ($score / $metro_jvm_r8_score) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                    local mult=$(printf "%.1f" "$(echo "scale=4; $score / $metro_jvm_r8_score" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local pct=$(printf "%.1f" "$(echo "scale=4; ($score / $metro_jvm_r8_score) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local mult=$(printf "%.2f" "$(echo "scale=4; $score / $metro_jvm_r8_score" | bc 2>/dev/null)" 2>/dev/null || echo "")
                     if [ -n "$pct" ] && [ -n "$mult" ]; then
                         vs_metro="+${pct}% (${mult}x)"
                     fi
@@ -2829,8 +2829,8 @@ EOF
                     if [ "$mode" = "metro" ]; then
                         vs_metro="baseline"
                     elif [ -n "$metro_macro_score" ] && [ "$metro_macro_score" != "0" ]; then
-                        local pct=$(printf "%.0f" "$(echo "scale=4; ($score / $metro_macro_score) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                        local mult=$(printf "%.1f" "$(echo "scale=4; $score / $metro_macro_score" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                        local pct=$(printf "%.1f" "$(echo "scale=4; ($score / $metro_macro_score) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                        local mult=$(printf "%.2f" "$(echo "scale=4; $score / $metro_macro_score" | bc 2>/dev/null)" 2>/dev/null || echo "")
                         if [ -n "$pct" ] && [ -n "$mult" ]; then
                             vs_metro="+${pct}% (${mult}x)"
                         fi
@@ -2864,8 +2864,8 @@ EOF
                 if [ "$mode" = "metro" ]; then
                     vs_metro="baseline"
                 elif [ -n "$metro_micro_score" ] && [ "$metro_micro_score" != "0" ]; then
-                    local pct=$(printf "%.0f" "$(echo "scale=4; ($score / $metro_micro_score) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
-                    local mult=$(printf "%.1f" "$(echo "scale=4; $score / $metro_micro_score" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local pct=$(printf "%.1f" "$(echo "scale=4; ($score / $metro_micro_score) * 100" | bc 2>/dev/null)" 2>/dev/null || echo "")
+                    local mult=$(printf "%.2f" "$(echo "scale=4; $score / $metro_micro_score" | bc 2>/dev/null)" 2>/dev/null || echo "")
                     if [ -n "$pct" ] && [ -n "$mult" ]; then
                         vs_metro="+${pct}% (${mult}x)"
                     fi
