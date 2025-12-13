@@ -348,7 +348,8 @@ $dependencies
 }
 
 metro {
-  enableGraphSharding.set($enableSharding)
+  // TODO re-enable when we can target Metro 0.8.3+
+  // enableGraphSharding.set($enableSharding)
   interop {
     includeJavax()
     includeAnvilForDagger()
