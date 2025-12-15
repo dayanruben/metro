@@ -15,6 +15,7 @@ This release significantly improves the runtime performance of Metro-generated g
 - 🤏 Reduces generated graph code size by **60–70%** (even higher if you heavily use multibindings)
 - [docs] Add runtime benchmarks to performance docs: https://zacsweers.github.io/metro/latest/performance#runtime-performance
 - [docs] Refresh build performance docs: https://zacsweers.github.io/metro/latest/performance#build-performance
+- [docs] Add a new quick start doc: Last bit: Metro now has a quick start doc! https://zacsweers.github.io/metro/latest/quickstart/
 - **Behavior change**: When using top-level function injection, the generated class now has the same name as the function. Previously it was suffixed with `Class`.
 - **New**: Experimental support for sharding large graphs. For extremely large dependency graphs on the JVM, their generated implementations could exceed the JVM class size limit. To avoid this, Metro now supports sharding within graphs (as needed) to distribute initialization code across multiple inner _shard_ classes. This is currently disabled by default but can be enabled via the `enableGraphSharding` Gradle DSL property.
 - **New**: Support `@Provides` properties with `@JvmField` annotations.
@@ -50,6 +51,7 @@ Special thanks to the following contributors for contributing to this release!
 - [@mateherber-jt](https://github.com/mateherber-jt)
 - [@neworld](https://github.com/neworld)
 - [@ritesh-singh](https://github.com/ritesh-singh)
+- [@zsmb13](https://github.com/zsmb13)
 
 0.8.2
 -----
