@@ -4,10 +4,17 @@ Changelog
 **Unreleased**
 --------------
 
+0.9.0
+-----
+
+_2025-12-15_
+
 This release significantly improves the runtime performance of Metro-generated graphs, bringing them to parity with Dagger components' typical runtime performance (without fastInit enabled).
 
-- 🚀 Improves graph init runtime performance by **30–40%**
+- 🚀 Improves graph init runtime performance in large graphs by **30–40%**
 - 🤏 Reduces generated graph code size by **60–70%** (even higher if you heavily use multibindings)
+- [docs] Add runtime benchmarks to performance docs: https://zacsweers.github.io/metro/latest/performance#runtime-performance
+- [docs] Refresh build performance docs: https://zacsweers.github.io/metro/latest/performance#build-performance
 - **Behavior change**: When using top-level function injection, the generated class now has the same name as the function. Previously it was suffixed with `Class`.
 - **New**: Experimental support for sharding large graphs. For extremely large dependency graphs on the JVM, their generated implementations could exceed the JVM class size limit. To avoid this, Metro now supports sharding within graphs (as needed) to distribute initialization code across multiple inner _shard_ classes. This is currently disabled by default but can be enabled via the `enableGraphSharding` Gradle DSL property.
 - **New**: Support `@Provides` properties with `@JvmField` annotations.
@@ -29,6 +36,20 @@ This release significantly improves the runtime performance of Metro-generated g
 - **Fix**: Use eager graphs for dominator tree analysis.
 - **Fix**: Don't apply `replaces` effect from excluded contributions (regular and binding containers).
 - **Fix**: Improve error messaging and hints when invisible map keys are detected.
+
+Special thanks to the following contributors for contributing to this release!
+
+- [@ansman](https://github.com/ansman)
+- [@bherbst](https://github.com/bherbst)
+- [@hossain-khan](https://github.com/hossain-khan)
+- [@izantech](https://github.com/izantech)
+- [@jingibus](https://github.com/jingibus)
+- [@jonamireh](https://github.com/jonamireh)
+- [@jonhan](https://github.com/jonhan)
+- [@kevinguitar](https://github.com/kevinguitar)
+- [@mateherber-jt](https://github.com/mateherber-jt)
+- [@neworld](https://github.com/neworld)
+- [@ritesh-singh](https://github.com/ritesh-singh)
 
 0.8.2
 -----

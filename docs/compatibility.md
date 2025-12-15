@@ -28,6 +28,7 @@ The following Kotlin versions are tested via CI:
 | Kotlin Version  |
 |-----------------|
 | 2.3.20-dev-5437 |
+| 2.3.0-RC3       |
 | 2.3.0-RC2       |
 | 2.3.0-RC        |
 | 2.3.0-Beta2     |
