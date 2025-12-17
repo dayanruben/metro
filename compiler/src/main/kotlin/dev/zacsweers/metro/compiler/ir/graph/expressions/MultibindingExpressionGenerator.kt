@@ -301,12 +301,6 @@ internal class MultibindingExpressionGenerator(
         }
     }
 
-  // TODO
-  //  test failures
-  //  bindingpropertycollector - if a provider is used in multiple multibindings, field instead of
-  //  lazy getter?
-  //  or - geneate property, for instance. If a provider is requested instead, generate that then
-  //  update the instance access to call that + get()
   context(scope: IrBuilderWithScope)
   private fun generateSetFactoryExpression(
     elementType: IrType,
