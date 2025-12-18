@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+0.9.2
+-----
+
+_2025-12-18_
+
 ### New
 
 - [Gradle DSL + FIR] Configurable `nonPublicContributionSeverity` diagnostic that allows for configuring non-public contributions to warn or error. See its kdoc for full details.
@@ -20,6 +25,16 @@ Changelog
 - [IR] Fix dynamic graph bindings not being propagated to graph extensions.
 - [IR] Fix detection of `internal` contributions from non-friend compilations in IR contribution merging.
 - [IR] Fix detection of `internal` contributions from friend compilations in IR contribution merging. Not a typo, turns out both scenarios were misbehaving in different ways.
+
+### Contributors
+
+Special thanks to the following contributors for contributing to this release!
+
+- [@JoelWilcox](https://github.com/JoelWilcox)
+- [@ansman](https://github.com/ansman)
+- [@jingibus](https://github.com/jingibus)
+- [@mateherber-jt](https://github.com/mateherber-jt)
+- [@vRallev](https://github.com/vRallev)
 
 0.9.1
 -----
