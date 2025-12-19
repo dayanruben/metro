@@ -203,6 +203,54 @@ The `:startup-jvm-minified` module then depends on this minified jar and runs st
 
 This provides insight into how Metro performs in production Android apps where R8 is typically enabled.
 
+### Multiplatform Startup Benchmarks (kotlinx-benchmark)
+
+Uses [kotlinx-benchmark](https://github.com/Kotlin/kotlinx-benchmark) to measure graph creation
+performance across multiple Kotlin targets (JVM, JS, WasmJS, Native).
+
+```bash
+# First, generate the multiplatform benchmark project
+kotlin generate-projects.main.kts --mode metro --multiplatform
+
+# Run kotlinx-benchmark for all targets
+./gradlew :startup-multiplatform:benchmark
+
+# Run for specific targets
+./gradlew :startup-multiplatform:jvmBenchmark
+./gradlew :startup-multiplatform:jsBenchmark
+./gradlew :startup-multiplatform:wasmJsBenchmark
+./gradlew :startup-multiplatform:macosArm64Benchmark  # or macosX64Benchmark, linuxX64Benchmark
+
+# Results are saved to startup-multiplatform/build/reports/benchmarks/
+```
+
+Or use the runner script:
+
+```bash
+# Run all targets
+./run_startup_benchmarks.sh multiplatform
+
+# Run specific target
+./run_startup_benchmarks.sh multiplatform --target jvm
+./run_startup_benchmarks.sh multiplatform --target js
+./run_startup_benchmarks.sh multiplatform --target wasmJs
+./run_startup_benchmarks.sh multiplatform --target native
+
+# Results are saved to startup-benchmark-results/{timestamp}/multiplatform-{target}_metro/
+```
+
+#### Analyzing Results with Kotlin Notebooks
+
+kotlinx-benchmark outputs JSON results that can be analyzed in [Kotlin Notebooks](https://plugins.jetbrains.com/plugin/16340-kotlin-notebook)
+for statistical analysis and visualization.
+
+1. Install the Kotlin Notebook plugin in IntelliJ IDEA
+2. Open `notebooks/analyze-benchmark-results.ipynb`
+3. Update the results path and run cells
+
+See [JetBrains Blog: Exploring kotlinx-benchmark Results](https://blog.jetbrains.com/kotlin/2025/12/a-better-way-to-explore-kotlinx-benchmark-results-with-kotlin-notebooks/)
+for more details on analysis techniques.
+
 ### Android Startup Benchmarks
 
 Uses [AndroidX Macrobenchmark](https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview)
@@ -233,6 +281,10 @@ Use the `run_startup_benchmarks.sh` script to run all startup benchmarks and agg
 
 # Run only JVM R8-minified benchmarks (Metro only)
 ./run_startup_benchmarks.sh jvm-r8
+
+# Run multiplatform benchmarks (Metro only, kotlinx-benchmark)
+./run_startup_benchmarks.sh multiplatform
+./run_startup_benchmarks.sh multiplatform --target jvm  # specific target
 
 # Run only Android benchmarks (requires device)
 ./run_startup_benchmarks.sh android
@@ -310,3 +362,81 @@ This allows comparing performance across Metro releases or testing a published v
 
 The Android benchmark app (`startup-android/app`) is configured with:
 - **R8 optimization**: Minification and shrinking enabled for release/benchmark builds
+
+## Continuous Regression Testing
+
+Automated benchmark regression testing runs via GitHub Actions to catch performance regressions early.
+
+### How It Works
+
+The `benchmark-regression.yml` workflow uses a **paired comparison** approach:
+- On every push to `main`, it benchmarks both `HEAD~1` (baseline) and `HEAD` (current)
+- Both benchmarks run on the **same machine** in the same job
+- This eliminates hardware variance - only the delta between runs matters
+
+```
+─── baseline (main~1)    ─── current (main)
+
+     │
+0.20 │    ●────●              ← Both jump (different machine)
+     │   /      \
+0.15 │  ●        ●────●       ← Both drop (different machine)
+     │ ╱          ╲   ╲
+0.10 │●            ●───●
+     └─────────────────────
+       run1  run2  run3  run4
+
+The gap between lines = real performance change
+Both lines moving together = hardware variance (ignore)
+```
+
+### What Gets Benchmarked
+
+Two benchmarks run in parallel:
+
+| Benchmark | What it measures | Tool |
+|-----------|------------------|------|
+| **Startup** | Time to create and initialize Metro graph | kotlinx-benchmark |
+| **Build** | Time to compile the benchmark project | Gradle Profiler |
+
+### Triggering Benchmarks
+
+**Automatic (on push to main):**
+- Runs when `compiler/`, `runtime/`, or `benchmark/` paths change
+- Results are stored for historical tracking
+
+**Manual (on PRs):**
+1. Add the `benchmark` label to your PR
+2. Workflow compares your PR against `main`
+3. Comments on the PR if >5% regression detected
+
+### Viewing Results
+
+**Historical Charts:**
+- Visit [zacsweers.github.io/metro/dev/bench/](https://zacsweers.github.io/metro/dev/bench/) for startup benchmarks
+- Visit [zacsweers.github.io/metro/dev/bench/build/](https://zacsweers.github.io/metro/dev/bench/build/) for build time benchmarks
+
+**Per-Run Results:**
+- Check the workflow run's **Summary** tab for a comparison table
+- Download artifacts for raw JSON/CSV data
+
+### Regression Threshold
+
+A **5% slowdown** triggers a regression warning. This threshold balances:
+- Catching meaningful regressions
+- Avoiding false positives from measurement noise
+
+### Manual Benchmarks
+
+For more comprehensive benchmarking (multiple modes, Android, etc.), use the manual `benchmarks.yml` workflow:
+
+```bash
+# Via GitHub CLI
+gh workflow run benchmarks.yml \
+  -f ref1=main \
+  -f ref2=feature-branch \
+  -f metro=true \
+  -f run-multiplatform-benchmarks=true
+```
+
+Or trigger from the Actions tab in GitHub with the desired options.
