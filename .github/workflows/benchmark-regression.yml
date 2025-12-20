@@ -473,6 +473,7 @@ jobs:
           output-file-path: /tmp/startup-results/benchmark-current/current.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: false
+          skip-fetch-gh-pages: true
           gh-pages-branch: gh-pages
           benchmark-data-dir-path: dev/bench
 
@@ -484,6 +485,7 @@ jobs:
           output-file-path: /tmp/build-results/build-benchmark-baseline/baseline.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: false
+          skip-fetch-gh-pages: true
           gh-pages-branch: gh-pages
           benchmark-data-dir-path: dev/bench/build
 
@@ -495,5 +497,6 @@ jobs:
           output-file-path: /tmp/build-results/build-benchmark-current/current.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
+          skip-fetch-gh-pages: true
           gh-pages-branch: gh-pages
           benchmark-data-dir-path: dev/bench/build
