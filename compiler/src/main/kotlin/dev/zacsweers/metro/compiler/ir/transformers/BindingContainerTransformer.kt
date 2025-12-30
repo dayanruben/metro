@@ -52,7 +52,7 @@ import dev.zacsweers.metro.compiler.ir.subcomponentsArgument
 import dev.zacsweers.metro.compiler.ir.thisReceiverOrFail
 import dev.zacsweers.metro.compiler.ir.toClassReferences
 import dev.zacsweers.metro.compiler.ir.toProto
-import dev.zacsweers.metro.compiler.ir.transformMultiboundQualifier
+import dev.zacsweers.metro.compiler.ir.transformIfIntoMultibinding
 import dev.zacsweers.metro.compiler.ir.writeDiagnostic
 import dev.zacsweers.metro.compiler.mapNotNullToSet
 import dev.zacsweers.metro.compiler.mapToSet
@@ -893,8 +893,7 @@ internal class BindingContainerTransformer(context: IrMetroContext) : IrMetroCon
                   )
                   return null
                 }
-                val transformedTypeKey =
-                  contextKey.typeKey.transformMultiboundQualifier(annotations)
+                val transformedTypeKey = contextKey.typeKey.transformIfIntoMultibinding(annotations)
 
                 providerFactories[callableId] =
                   ProviderFactory.Dagger(
