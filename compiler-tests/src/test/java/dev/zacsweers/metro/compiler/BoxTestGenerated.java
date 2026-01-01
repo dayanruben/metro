@@ -919,6 +919,12 @@ public class BoxTestGenerated extends AbstractBoxTest {
       }
 
       @Test
+      @TestMetadata("PropagatingMultibindingsAcrossExtensionsOnlyUsedInExtensions.kt")
+      public void testPropagatingMultibindingsAcrossExtensionsOnlyUsedInExtensions() {
+        runTest("compiler-tests/src/test/data/box/dependencygraph/extensions/PropagatingMultibindingsAcrossExtensionsOnlyUsedInExtensions.kt");
+      }
+
+      @Test
       @TestMetadata("ScopedExtensionsWithoutFactoriesShouldBeCached.kt")
       public void testScopedExtensionsWithoutFactoriesShouldBeCached() {
         runTest("compiler-tests/src/test/data/box/dependencygraph/extensions/ScopedExtensionsWithoutFactoriesShouldBeCached.kt");
