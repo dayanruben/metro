@@ -543,8 +543,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout gh-pages
         uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Checkout main (for commit info)
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: main-checkout
+          fetch-depth: 1
 
       - name: Download startup benchmark results
         uses: actions/download-artifact@v7
@@ -558,50 +568,209 @@ jobs:
           name: build-benchmark-results
           path: /tmp/build-results
 
-      # Store all results sequentially, only pushing on the final one
-      - name: Store startup baseline result
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Startup (baseline)
-          tool: 'jmh'
-          output-file-path: /tmp/startup-results/benchmark-baseline/baseline.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: false
-          gh-pages-branch: gh-pages
-          benchmark-data-dir-path: dev/bench
+      - name: Append startup benchmark results (sawtooth format)
+        run: |
+          cd gh-pages
 
-      - name: Store startup current result
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Startup (current)
-          tool: 'jmh'
-          output-file-path: /tmp/startup-results/benchmark-current/current.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: false
-          skip-fetch-gh-pages: true
-          gh-pages-branch: gh-pages
-          benchmark-data-dir-path: dev/bench
+          # Get commit info
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_SHORT="${COMMIT_SHA:0:8}"
 
-      - name: Store build baseline result
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Build Time (baseline)
-          tool: 'customSmallerIsBetter'
-          output-file-path: /tmp/build-results/build-benchmark-baseline/baseline.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: false
-          skip-fetch-gh-pages: true
-          gh-pages-branch: gh-pages
-          benchmark-data-dir-path: dev/bench/build
+          # Read baseline and current values
+          baseline_json="/tmp/startup-results/benchmark-baseline/baseline.json"
+          current_json="/tmp/startup-results/benchmark-current/current.json"
 
-      - name: Store build current result
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Build Time (current)
-          tool: 'customSmallerIsBetter'
-          output-file-path: /tmp/build-results/build-benchmark-current/current.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: true
-          skip-fetch-gh-pages: true
-          gh-pages-branch: gh-pages
-          benchmark-data-dir-path: dev/bench/build
+          baseline_value=$(python3 -c "import json; print(json.load(open('$baseline_json'))[0]['primaryMetric']['score'])")
+          current_value=$(python3 -c "import json; print(json.load(open('$current_json'))[0]['primaryMetric']['score'])")
+
+          # Calculate delta
+          delta_pct=$(python3 -c "
+          baseline = $baseline_value
+          current = $current_value
+          delta = ((current - baseline) / baseline) * 100
+          sign = '+' if delta > 0 else ''
+          print(f'{sign}{delta:.2f}')
+          ")
+
+          # Get commit details from main checkout (not gh-pages)
+          COMMIT_MSG=$(git -C ../main-checkout log -1 --format='%s' 2>/dev/null || echo "Commit $COMMIT_SHORT")
+          COMMIT_MSG_ESCAPED=$(echo "$COMMIT_MSG" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip())[1:-1])")
+          COMMIT_AUTHOR=$(git -C ../main-checkout log -1 --format='%an' 2>/dev/null || echo "Unknown")
+          COMMIT_TIME=$(git -C ../main-checkout log -1 --format='%cI' 2>/dev/null || echo "")
+          DATE_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
+
+          # Update data.js with new entries
+          python3 << EOF
+          import json
+          import os
+
+          data_file = 'dev/bench/data.js'
+
+          # Read existing data
+          if os.path.exists(data_file):
+              with open(data_file) as f:
+                  content = f.read()
+              json_str = content.replace('window.BENCHMARK_DATA = ', '')
+              data = json.loads(json_str)
+          else:
+              data = {'lastUpdate': 0, 'repoUrl': 'https://github.com/${{ github.repository }}', 'entries': {}}
+
+          # Ensure chart exists
+          if 'Startup Benchmark' not in data['entries']:
+              data['entries']['Startup Benchmark'] = []
+
+          entries = data['entries']['Startup Benchmark']
+
+          commit_info = {
+              'author': {'name': '$COMMIT_AUTHOR', 'username': '${{ github.actor }}'},
+              'committer': {'name': '$COMMIT_AUTHOR', 'username': '${{ github.actor }}'},
+              'distinct': True,
+              'id': '$COMMIT_SHA',
+              'message': '$COMMIT_MSG_ESCAPED',
+              'timestamp': '$COMMIT_TIME',
+              'tree_id': '',
+              'url': 'https://github.com/${{ github.repository }}/commit/$COMMIT_SHA'
+          }
+
+          # Before entry (with ~1 suffix to show as previous commit)
+          before_entry = {
+              'commit': {**commit_info, 'id': '${COMMIT_SHORT}~1', 'message': '[before] ' + commit_info['message'][:50]},
+              'date': $DATE_MS,
+              'tool': 'jmh',
+              'benches': [{
+                  'name': 'Startup',
+                  'value': $baseline_value,
+                  'unit': 'ms/op',
+                  'extra': 'before (HEAD~1)\\niterations: 10\\nforks: 2\\nthreads: 1'
+              }]
+          }
+          entries.append(before_entry)
+
+          # After entry
+          after_entry = {
+              'commit': {**commit_info, 'message': '[after] ' + commit_info['message'][:50]},
+              'date': $DATE_MS + 1,
+              'tool': 'jmh',
+              'benches': [{
+                  'name': 'Startup',
+                  'value': $current_value,
+                  'unit': 'ms/op',
+                  'extra': 'after (HEAD)\\ndelta: $delta_pct%\\niterations: 10\\nforks: 2\\nthreads: 1'
+              }]
+          }
+          entries.append(after_entry)
+
+          data['lastUpdate'] = $DATE_MS
+
+          with open(data_file, 'w') as f:
+              f.write('window.BENCHMARK_DATA = ')
+              json.dump(data, f, indent=2)
+
+          print(f"Added 2 entries. Total: {len(entries)}")
+          EOF
+
+      - name: Append build benchmark results (sawtooth format)
+        run: |
+          cd gh-pages
+
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_SHORT="${COMMIT_SHA:0:8}"
+
+          baseline_json="/tmp/build-results/build-benchmark-baseline/baseline.json"
+          current_json="/tmp/build-results/build-benchmark-current/current.json"
+
+          baseline_value=$(python3 -c "import json; print(json.load(open('$baseline_json'))[0]['value'])")
+          current_value=$(python3 -c "import json; print(json.load(open('$current_json'))[0]['value'])")
+
+          delta_pct=$(python3 -c "
+          baseline = $baseline_value
+          current = $current_value
+          if baseline != 0:
+              delta = ((current - baseline) / baseline) * 100
+              sign = '+' if delta > 0 else ''
+              print(f'{sign}{delta:.2f}')
+          else:
+              print('N/A')
+          ")
+
+          # Get commit details from main checkout (not gh-pages)
+          COMMIT_MSG=$(git -C ../main-checkout log -1 --format='%s' 2>/dev/null || echo "Commit $COMMIT_SHORT")
+          COMMIT_MSG_ESCAPED=$(echo "$COMMIT_MSG" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip())[1:-1])")
+          COMMIT_AUTHOR=$(git -C ../main-checkout log -1 --format='%an' 2>/dev/null || echo "Unknown")
+          COMMIT_TIME=$(git -C ../main-checkout log -1 --format='%cI' 2>/dev/null || echo "")
+          DATE_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
+
+          python3 << EOF
+          import json
+          import os
+
+          data_file = 'dev/bench/build/data.js'
+          os.makedirs(os.path.dirname(data_file), exist_ok=True)
+
+          if os.path.exists(data_file):
+              with open(data_file) as f:
+                  content = f.read()
+              json_str = content.replace('window.BENCHMARK_DATA = ', '')
+              data = json.loads(json_str)
+          else:
+              data = {'lastUpdate': 0, 'repoUrl': 'https://github.com/${{ github.repository }}', 'entries': {}}
+
+          if 'Build Time Benchmark' not in data['entries']:
+              data['entries']['Build Time Benchmark'] = []
+
+          entries = data['entries']['Build Time Benchmark']
+
+          commit_info = {
+              'author': {'name': '$COMMIT_AUTHOR', 'username': '${{ github.actor }}'},
+              'committer': {'name': '$COMMIT_AUTHOR', 'username': '${{ github.actor }}'},
+              'distinct': True,
+              'id': '$COMMIT_SHA',
+              'message': '$COMMIT_MSG_ESCAPED',
+              'timestamp': '$COMMIT_TIME',
+              'tree_id': '',
+              'url': 'https://github.com/${{ github.repository }}/commit/$COMMIT_SHA'
+          }
+
+          before_entry = {
+              'commit': {**commit_info, 'id': '${COMMIT_SHORT}~1', 'message': '[before] ' + commit_info['message'][:50]},
+              'date': $DATE_MS,
+              'tool': 'customSmallerIsBetter',
+              'benches': [{
+                  'name': 'Build Time',
+                  'value': $baseline_value,
+                  'unit': 'ms',
+                  'extra': 'before (HEAD~1)'
+              }]
+          }
+          entries.append(before_entry)
+
+          after_entry = {
+              'commit': {**commit_info, 'message': '[after] ' + commit_info['message'][:50]},
+              'date': $DATE_MS + 1,
+              'tool': 'customSmallerIsBetter',
+              'benches': [{
+                  'name': 'Build Time',
+                  'value': $current_value,
+                  'unit': 'ms',
+                  'extra': 'after (HEAD)\\ndelta: $delta_pct%'
+              }]
+          }
+          entries.append(after_entry)
+
+          data['lastUpdate'] = $DATE_MS
+
+          with open(data_file, 'w') as f:
+              f.write('window.BENCHMARK_DATA = ')
+              json.dump(data, f, indent=2)
+
+          print(f"Added 2 entries. Total: {len(entries)}")
+          EOF
+
+      - name: Commit and push results
+        run: |
+          cd gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Update benchmark results for ${{ github.sha }}" || echo "No changes to commit"
+          git push
