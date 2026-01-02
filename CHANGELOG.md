@@ -4,7 +4,12 @@ Changelog
 **Unreleased**
 --------------
 
-### New
+0.9.3
+-----
+
+_2026-01-02_
+
+Happy new year!
 
 ### Enhancements
 
@@ -32,6 +37,14 @@ Changelog
 
 - [FIR] Change `SUSPICIOUS_MEMBER_INJECT_FUNCTION` diagnostic to be a warning instead of an error.
 - Remove testing of 2.3.0 pre-releases. IntelliJ stable currently builds off Kotlin `2.3.2x` and Android Studio stable currently points to Kotlin `2.2.2x`.
+
+### Contributors
+
+Special thanks to the following contributors for contributing to this release!
+
+- [@JoelWilcox](https://github.com/JoelWilcox)
+- [@japplin](https://github.com/japplin)
+- [@vRallev](https://github.com/vRallev)
 
 0.9.2
 -----
