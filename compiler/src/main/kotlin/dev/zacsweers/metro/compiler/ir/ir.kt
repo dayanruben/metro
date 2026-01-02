@@ -44,7 +44,6 @@ import org.jetbrains.kotlin.descriptors.isObject
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.expressions.FirAnnotation
 import org.jetbrains.kotlin.fir.lazy.AbstractFir2IrLazyDeclaration
-import org.jetbrains.kotlin.fir.lazy.Fir2IrLazyClass
 import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
@@ -898,7 +897,7 @@ internal fun Sequence<IrElement?>.joinToKotlinLike(separator: String = "\n"): St
 }
 
 internal val IrDeclarationParent.isExternalParent: Boolean
-  get() = this is Fir2IrLazyClass || this is IrExternalPackageFragment
+  get() = this is AbstractFir2IrLazyDeclaration<*> || this is IrExternalPackageFragment
 
 /**
  * An [irBlockBody] with a single [expression]. This is useful because [irExprBody] is not

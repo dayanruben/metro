@@ -11,6 +11,8 @@ Changelog
 - [FIR] Add diagnostic for multiple graph-like annotations on a single declaration.
 - [IR] Stub `@Binds` expressions in origin points rather than graphs. This reduces unnecessary extra generated functions.
 - [IR] Generate reusable getters for scalar-only dependencies that are used multiple times. This helps avoid `MethodTooLargeException` errors in the JVM.
+- [IR] Detect suspicious member injections from inherited inject functions too.
+- [IR] Don't try to validate graphs if `QualifierOverrideMismatch` errors were reported prior to graph validation. This helps reduce noise in failure cases, as it would otherwise also likely report `MissingBinding` errors caused by the source of the `QualifierOverrideMismatch` error.
 
 ### Fixes
 
