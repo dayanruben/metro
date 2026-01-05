@@ -232,8 +232,6 @@ tasks.withType<Test> {
   // Properties required to run the internal test framework.
   systemProperty("idea.ignore.disabled.plugins", "true")
   systemProperty("idea.home.path", rootDir)
-
-  jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
 fun Test.setLibraryProperty(propName: String, jarName: String) {
