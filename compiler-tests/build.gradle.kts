@@ -175,6 +175,34 @@ tasks.withType<Test> {
 
   workingDir = rootDir
 
+  if (providers.gradleProperty("metro.debugCompilerTests").isPresent) {
+
+    testLogging {
+      showStandardStreams = true
+      showStackTraces = true
+
+      // Set options for log level LIFECYCLE
+      events("started", "passed", "failed", "skipped")
+      setExceptionFormat("short")
+
+      // Setting this to 0 (the default is 2) will display the test executor that each test is
+      // running on.
+      displayGranularity = 0
+    }
+
+    val outputDir = isolated.rootProject.projectDirectory.dir("tmp").asFile.apply { mkdirs() }
+
+    jvmArgs(
+      "-XX:+HeapDumpOnOutOfMemoryError", // Produce a heap dump when an OOM occurs
+      "-XX:+CrashOnOutOfMemoryError", // Produce a crash report when an OOM occurs
+      "-XX:+UseGCOverheadLimit",
+      "-XX:GCHeapFreeLimit=10",
+      "-XX:GCTimeLimit=20",
+      "-XX:HeapDumpPath=$outputDir",
+      "-XX:ErrorFile=$outputDir",
+    )
+  }
+
   useJUnitPlatform()
 
   setLibraryProperty("kotlin.minimal.stdlib.path", "kotlin-stdlib")
@@ -204,6 +232,8 @@ tasks.withType<Test> {
   // Properties required to run the internal test framework.
   systemProperty("idea.ignore.disabled.plugins", "true")
   systemProperty("idea.home.path", rootDir)
+
+  jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
 fun Test.setLibraryProperty(propName: String, jarName: String) {
