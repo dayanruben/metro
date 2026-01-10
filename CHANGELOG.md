@@ -21,6 +21,10 @@ _2026-01-09_
 - [IR / Dagger Interop] Ensure `@BindsOptionalOf` bindings that are satisfied by scoped bindings use the scoped instance.
 - [IR / Reports] Don't de-dupe alias/memberinject bindings in graph metadata reports if one is already present.
 
+### Changes
+
+- Remove `-checkdiscard` rules from embedded proguard rules.
+
 ### Contributors
 
 Special thanks to the following contributors for contributing to this release!
