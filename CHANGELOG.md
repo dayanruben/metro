@@ -4,7 +4,10 @@ Changelog
 **Unreleased**
 --------------
 
-### New
+0.9.4
+-----
+
+_2026-01-09_
 
 ### Enhancements
 
@@ -18,9 +21,12 @@ Changelog
 - [IR / Dagger Interop] Ensure `@BindsOptionalOf` bindings that are satisfied by scoped bindings use the scoped instance.
 - [IR / Reports] Don't de-dupe alias/memberinject bindings in graph metadata reports if one is already present.
 
-### Changes
-
 ### Contributors
+
+Special thanks to the following contributors for contributing to this release!
+
+- [@C2H6O](https://github.com/C2H6O)
+- [@chrisbanes](https://github.com/chrisbanes)
 
 0.9.3
 -----
