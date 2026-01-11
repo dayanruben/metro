@@ -4,6 +4,23 @@ Changelog
 **Unreleased**
 --------------
 
+### New
+
+### Enhancements
+
+- [IR] Restructure graph validation and generation to be separate phases, allowing for whole-graph validation before any code gen runs and better optimizing shared bindings across graph extension hierarchies.
+
+### Fixes
+
+- [IR] Never eagerly init graph extension impls (scoped or not).
+- [IR] Don't cache creator-less scoped graph extension impls in their parent graphs. This was initially implemented this way due to a misunderstanding to how Dagger generated subcomponents! Getters for graph extensions now always return new instances.
+
+### Changes
+
+- [IR] Report log files reported from within graph generation now use snake-cased fully-qualified names of the impl graph as the file name suffix.
+
+### Contributors
+
 0.9.4
 -----
 
