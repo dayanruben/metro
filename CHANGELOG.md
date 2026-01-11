@@ -17,6 +17,7 @@ Changelog
 
 ### Changes
 
+- [IR] Already mentioned above, but worth calling out again — creator-less scoped graph extensions _are no longer cached_ in their parent graphs. Accessors to this will always get new instances now.
 - [IR] Report log files reported from within graph generation now use snake-cased fully-qualified names of the impl graph as the file name suffix.
 
 ### Contributors
