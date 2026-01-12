@@ -96,13 +96,16 @@ jobs:
             }
 
             // Update issue body with latest versions
-            const newBody = `# Kotlin Bootstrap Versions
-
-Latest versions from the [JetBrains bootstrap repository](${MAVEN_URL}):
-
-${latestVersions.map(v => `- \`${v}\``).join('\n')}
-
-_Last updated: ${new Date().toISOString()}_`;
+            const versionList = latestVersions.map(v => `- \`${v}\``).join('\n');
+            const newBody = [
+              '# Kotlin Bootstrap Versions',
+              '',
+              `Latest versions from the [JetBrains bootstrap repository](${MAVEN_URL}):`,
+              '',
+              versionList,
+              '',
+              `_Last updated: ${new Date().toISOString()}_`
+            ].join('\n');
 
             await github.rest.issues.update({
               owner: context.repo.owner,
@@ -114,12 +117,15 @@ _Last updated: ${new Date().toISOString()}_`;
 
             // If there are new versions, add a notification comment
             if (newVersions.length > 0) {
-              const commentBody = `${NOTIFICATION_MARKER}
-## New Kotlin Bootstrap Version${newVersions.length > 1 ? 's' : ''} Detected!
-
-${newVersions.map(v => `- \`${v}\``).join('\n')}
-
-_This comment will be automatically removed on the next check._`;
+              const newVersionList = newVersions.map(v => `- \`${v}\``).join('\n');
+              const commentBody = [
+                NOTIFICATION_MARKER,
+                `## New Kotlin Bootstrap Version${newVersions.length > 1 ? 's' : ''} Detected!`,
+                '',
+                newVersionList,
+                '',
+                '_This comment will be automatically removed on the next check._'
+              ].join('\n');
 
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
