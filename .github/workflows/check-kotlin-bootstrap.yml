@@ -8,6 +8,7 @@ on:
 
 env:
   ISSUE_NUMBER: 1645
+  COUNT: 30
 
 jobs:
   check-versions:
@@ -22,7 +23,7 @@ jobs:
       - name: Fetch bootstrap versions
         id: fetch-bootstrap
         run: |
-          VERSIONS=$(./scripts/fetch-kotlin-bootstrap-versions.sh "https://packages.jetbrains.team/maven/p/kt/bootstrap/org/jetbrains/kotlin/kotlin-compiler" 20)
+          VERSIONS=$(./scripts/fetch-kotlin-bootstrap-versions.sh "https://packages.jetbrains.team/maven/p/kt/bootstrap/org/jetbrains/kotlin/kotlin-compiler" ${{ env.COUNT }})
           echo "versions<<EOF" >> $GITHUB_OUTPUT
           echo "$VERSIONS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -30,7 +31,7 @@ jobs:
       - name: Fetch intellij-dependencies versions
         id: fetch-intellij
         run: |
-          VERSIONS=$(./scripts/fetch-kotlin-bootstrap-versions.sh "https://packages.jetbrains.team/maven/p/ij/intellij-dependencies/org/jetbrains/kotlin/kotlin-compiler" 20)
+          VERSIONS=$(./scripts/fetch-kotlin-bootstrap-versions.sh "https://packages.jetbrains.team/maven/p/ij/intellij-dependencies/org/jetbrains/kotlin/kotlin-compiler" ${{ env.COUNT }})
           echo "versions<<EOF" >> $GITHUB_OUTPUT
           echo "$VERSIONS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
