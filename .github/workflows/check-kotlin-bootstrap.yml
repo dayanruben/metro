@@ -123,7 +123,29 @@ jobs:
 
             // Update issue body with latest versions (including timestamps)
             const bootstrapList = bootstrapEntries.map(e => `- \`${e.version}\` (${e.timestamp})`).join('\n');
-            const intellijList = intellijEntries.map(e => `- \`${e.version}\` (${e.timestamp})`).join('\n');
+
+            // Split intellij entries into ij-tagged versions and other (dev) versions
+            const ijPattern = /-ij\d+-/;
+            const intellijIjEntries = intellijEntries.filter(e => ijPattern.test(e.version));
+            const intellijDevEntries = intellijEntries.filter(e => !ijPattern.test(e.version));
+
+            // Take last 10 of each (they're already sorted oldest-first, so slice from end)
+            const intellijDevLast10 = intellijDevEntries.slice(-10);
+            const intellijIjLast10 = intellijIjEntries.slice(-10);
+
+            // Format with "..." separator between groups
+            const formatEntries = (entries) => entries.map(e => `- \`${e.version}\` (${e.timestamp})`).join('\n');
+            const intellijParts = [];
+            if (intellijDevLast10.length > 0) {
+              intellijParts.push(formatEntries(intellijDevLast10));
+            }
+            if (intellijDevLast10.length > 0 && intellijIjLast10.length > 0) {
+              intellijParts.push('- ...');
+            }
+            if (intellijIjLast10.length > 0) {
+              intellijParts.push(formatEntries(intellijIjLast10));
+            }
+            const intellijList = intellijParts.join('\n');
             const newBody = [
               '# Kotlin Dev Versions',
               '',
