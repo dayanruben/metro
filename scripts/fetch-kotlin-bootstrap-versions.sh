@@ -16,12 +16,12 @@ MAVEN_BASE="${1:?Usage: $0 <maven_base_url> [count]}"
 COUNT="${2:-10}"
 
 # Get versions from maven-metadata.xml, get top N newest, then reverse for display (oldest first)
-VERSIONS=$(curl -sSL "$MAVEN_BASE/maven-metadata.xml" \
+# Note: We capture to a variable first to avoid broken pipe errors with pipefail
+ALL_VERSIONS=$(curl -sSL "$MAVEN_BASE/maven-metadata.xml" \
   | grep -oE '<version>[^<]+</version>' \
   | sed 's/<version>//; s/<\/version>//' \
-  | sort -V -r \
-  | head -n "$COUNT" \
-  | sort -V)
+  | sort -V -r)
+VERSIONS=$(echo "$ALL_VERSIONS" | head -n "$COUNT" | sort -V)
 
 # For each version, fetch the timestamp from its directory page
 for VERSION in $VERSIONS; do
