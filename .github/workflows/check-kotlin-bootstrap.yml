@@ -37,18 +37,24 @@ jobs:
             const ISSUE_NUMBER = parseInt(process.env.ISSUE_NUMBER);
             const NOTIFICATION_MARKER = '<!-- kotlin-bootstrap-notification -->';
 
-            // Parse versions from script output
-            const latestVersions = process.env.VERSIONS
+            // Parse versions from script output (tab-separated: version\ttimestamp)
+            const versionEntries = process.env.VERSIONS
               .split('\n')
-              .map(v => v.trim())
-              .filter(v => v.length > 0);
+              .map(line => line.trim())
+              .filter(line => line.length > 0)
+              .map(line => {
+                const [version, timestamp] = line.split('\t');
+                return { version, timestamp: timestamp || 'unknown' };
+              });
 
-            console.log('Latest versions:', latestVersions);
+            console.log('Latest versions:', versionEntries);
 
-            if (latestVersions.length === 0) {
+            if (versionEntries.length === 0) {
               core.setFailed('No versions found');
               return;
             }
+
+            const latestVersions = versionEntries.map(e => e.version);
 
             // Get current issue
             const { data: issue } = await github.rest.issues.get({
@@ -60,7 +66,7 @@ jobs:
             // Parse existing versions from issue body
             const existingBody = issue.body || '';
             const existingVersions = [];
-            const versionLineRegex = /^- `([^`]+)`$/gm;
+            const versionLineRegex = /`([^`]+)`/gm;
             let versionMatch;
             while ((versionMatch = versionLineRegex.exec(existingBody)) !== null) {
               existingVersions.push(versionMatch[1]);
@@ -95,8 +101,8 @@ jobs:
               }
             }
 
-            // Update issue body with latest versions
-            const versionList = latestVersions.map(v => `- \`${v}\``).join('\n');
+            // Update issue body with latest versions (including timestamps)
+            const versionList = versionEntries.map(e => `- \`${e.version}\` (${e.timestamp})`).join('\n');
             const newBody = [
               '# Kotlin Bootstrap Versions',
               '',
