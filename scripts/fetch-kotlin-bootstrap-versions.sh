@@ -1,18 +1,19 @@
 #!/bin/bash
 #
-# Fetches Kotlin compiler versions from the JetBrains bootstrap Maven repository
+# Fetches Kotlin compiler versions from a Maven repository
 # and outputs the top N versions with their timestamps.
 #
-# Usage: fetch-kotlin-bootstrap-versions.sh [count]
+# Usage: fetch-kotlin-bootstrap-versions.sh <maven_base_url> [count]
+#   maven_base_url: Base URL to the kotlin-compiler artifact directory
 #   count: Number of versions to output (default: 10)
 #
-# Output: Tab-separated "version\ttimestamp" per line, sorted newest first
+# Output: Tab-separated "version\ttimestamp" per line, oldest first (newest at bottom)
 #
 
 set -euo pipefail
 
-MAVEN_BASE="https://packages.jetbrains.team/maven/p/kt/bootstrap/org/jetbrains/kotlin/kotlin-compiler"
-COUNT="${1:-10}"
+MAVEN_BASE="${1:?Usage: $0 <maven_base_url> [count]}"
+COUNT="${2:-10}"
 
 # Get versions from maven-metadata.xml, get top N newest, then reverse for display (oldest first)
 VERSIONS=$(curl -sSL "$MAVEN_BASE/maven-metadata.xml" \

@@ -19,10 +19,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Fetch versions
-        id: fetch
+      - name: Fetch bootstrap versions
+        id: fetch-bootstrap
         run: |
-          VERSIONS=$(./scripts/fetch-kotlin-bootstrap-versions.sh 10)
+          VERSIONS=$(./scripts/fetch-kotlin-bootstrap-versions.sh "https://packages.jetbrains.team/maven/p/kt/bootstrap/org/jetbrains/kotlin/kotlin-compiler" 10)
+          echo "versions<<EOF" >> $GITHUB_OUTPUT
+          echo "$VERSIONS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Fetch intellij-dependencies versions
+        id: fetch-intellij
+        run: |
+          VERSIONS=$(./scripts/fetch-kotlin-bootstrap-versions.sh "https://packages.jetbrains.team/maven/p/ij/intellij-dependencies/org/jetbrains/kotlin/kotlin-compiler" 10)
           echo "versions<<EOF" >> $GITHUB_OUTPUT
           echo "$VERSIONS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -30,31 +38,42 @@ jobs:
       - name: Update issue and notify
         uses: actions/github-script@v8
         env:
-          VERSIONS: ${{ steps.fetch.outputs.versions }}
+          BOOTSTRAP_VERSIONS: ${{ steps.fetch-bootstrap.outputs.versions }}
+          INTELLIJ_VERSIONS: ${{ steps.fetch-intellij.outputs.versions }}
         with:
           script: |
-            const MAVEN_URL = 'https://packages.jetbrains.team/maven/p/kt/bootstrap/org/jetbrains/kotlin/kotlin-compiler/';
+            const BOOTSTRAP_URL = 'https://packages.jetbrains.team/maven/p/kt/bootstrap/org/jetbrains/kotlin/kotlin-compiler/';
+            const INTELLIJ_URL = 'https://packages.jetbrains.team/maven/p/ij/intellij-dependencies/org/jetbrains/kotlin/kotlin-compiler/';
             const ISSUE_NUMBER = parseInt(process.env.ISSUE_NUMBER);
             const NOTIFICATION_MARKER = '<!-- kotlin-bootstrap-notification -->';
 
-            // Parse versions from script output (tab-separated: version\ttimestamp)
-            const versionEntries = process.env.VERSIONS
-              .split('\n')
-              .map(line => line.trim())
-              .filter(line => line.length > 0)
-              .map(line => {
-                const [version, timestamp] = line.split('\t');
-                return { version, timestamp: timestamp || 'unknown' };
-              });
+            // Helper to parse version output (tab-separated: version\ttimestamp)
+            const parseVersions = (input) => {
+              return (input || '')
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0)
+                .map(line => {
+                  const [version, timestamp] = line.split('\t');
+                  return { version, timestamp: timestamp || 'unknown' };
+                });
+            };
 
-            console.log('Latest versions:', versionEntries);
+            const bootstrapEntries = parseVersions(process.env.BOOTSTRAP_VERSIONS);
+            const intellijEntries = parseVersions(process.env.INTELLIJ_VERSIONS);
 
-            if (versionEntries.length === 0) {
+            console.log('Bootstrap versions:', bootstrapEntries);
+            console.log('IntelliJ versions:', intellijEntries);
+
+            if (bootstrapEntries.length === 0 && intellijEntries.length === 0) {
               core.setFailed('No versions found');
               return;
             }
 
-            const latestVersions = versionEntries.map(e => e.version);
+            const allLatestVersions = [
+              ...bootstrapEntries.map(e => e.version),
+              ...intellijEntries.map(e => e.version)
+            ];
 
             // Get current issue
             const { data: issue } = await github.rest.issues.get({
@@ -76,7 +95,7 @@ jobs:
             // Find new versions (in latest but not in existing)
             // If issue was blank (no existing versions), this is initial seeding - don't notify
             const isInitialSeed = existingVersions.length === 0;
-            const newVersions = isInitialSeed ? [] : latestVersions.filter(v => !existingVersions.includes(v));
+            const newVersions = isInitialSeed ? [] : allLatestVersions.filter(v => !existingVersions.includes(v));
             if (isInitialSeed) {
               console.log('Initial seed - populating versions without notification');
             } else {
@@ -102,13 +121,18 @@ jobs:
             }
 
             // Update issue body with latest versions (including timestamps)
-            const versionList = versionEntries.map(e => `- \`${e.version}\` (${e.timestamp})`).join('\n');
+            const bootstrapList = bootstrapEntries.map(e => `- \`${e.version}\` (${e.timestamp})`).join('\n');
+            const intellijList = intellijEntries.map(e => `- \`${e.version}\` (${e.timestamp})`).join('\n');
             const newBody = [
-              '# Kotlin Bootstrap Versions',
+              '# Kotlin Dev Versions',
               '',
-              `Latest versions from the [JetBrains bootstrap repository](${MAVEN_URL}):`,
+              `## [Bootstrap](${BOOTSTRAP_URL})`,
               '',
-              versionList,
+              bootstrapList,
+              '',
+              `## [IntelliJ Dependencies](${INTELLIJ_URL})`,
+              '',
+              intellijList,
               '',
               `_Last updated: ${new Date().toISOString()}_`
             ].join('\n');
@@ -126,7 +150,7 @@ jobs:
               const newVersionList = newVersions.map(v => `- \`${v}\``).join('\n');
               const commentBody = [
                 NOTIFICATION_MARKER,
-                `## New Kotlin Bootstrap Version${newVersions.length > 1 ? 's' : ''} Detected!`,
+                `## New Kotlin Version${newVersions.length > 1 ? 's' : ''} Detected!`,
                 '',
                 newVersionList,
                 '',
