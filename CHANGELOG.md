@@ -47,6 +47,7 @@ Changelog
   ```
 - [IR] Avoid generating unnecessary `Provider` refcounts for bindings only used by graph injector functions.
 - [IR] When reporting graph failures in dynamic graphs, report the original call location in error reporting.
+- [IR/Sharding] Rebalance shard groups after computing shard bindings.
 
 ### Fixes
 
@@ -130,6 +131,8 @@ Happy new year!
 
 ### Changes
 
+- Generated graph extension impls are now static nested classes rather inner classes. This should be a non-functional change.
+- `DelegateFactory` property fields are now initialized in topological order rather just always first. This should be a non-functional change.
 - [FIR] Change `SUSPICIOUS_MEMBER_INJECT_FUNCTION` diagnostic to be a warning instead of an error.
 - Remove testing of 2.3.0 pre-releases. IntelliJ stable currently builds off Kotlin `2.3.2x` and Android Studio stable currently points to Kotlin `2.2.2x`.
 
