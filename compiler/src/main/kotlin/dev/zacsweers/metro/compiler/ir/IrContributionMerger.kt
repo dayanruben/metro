@@ -6,6 +6,7 @@ import dev.zacsweers.metro.compiler.expectAsOrNull
 import dev.zacsweers.metro.compiler.fir.coneTypeIfResolved
 import dev.zacsweers.metro.compiler.fir.replacesArgument
 import dev.zacsweers.metro.compiler.getAndAdd
+import dev.zacsweers.metro.compiler.safePathString
 import java.util.SortedMap
 import java.util.SortedSet
 import org.jetbrains.kotlin.fir.expressions.FirGetClassCall
@@ -141,18 +142,31 @@ internal class IrContributionMerger(
     // TODO do we exclude directly contributed ones or also include transitives?
 
     // Process excludes
+    val unmatchedExclusions = mutableSetOf<ClassId>()
     for (excludedClassId in excluded) {
       // Remove excluded binding containers - they won't contribute their bindings
-      mutableContributedBindingContainers.remove(excludedClassId)
+      val removedContainer = mutableContributedBindingContainers.remove(excludedClassId)
 
       // Remove contributions from excluded classes that have nested `MetroContribution` classes
       // (binding containers don't have these, so this only affects @ContributesBinding etc.)
-      mutableAllContributions.remove(excludedClassId)
+      val removedContribution = mutableAllContributions.remove(excludedClassId)
 
       // Remove contributions that have @Origin annotation pointing to the excluded class
-      originToContributions[excludedClassId]?.forEach { contributionId ->
+      val originContributions = originToContributions[excludedClassId]
+      originContributions?.forEach { contributionId ->
         mutableAllContributions.remove(contributionId)
         mutableContributedBindingContainers.remove(contributionId)
+      }
+
+      // Track unmatched if nothing was removed
+      if (removedContainer == null && removedContribution == null && originContributions == null) {
+        unmatchedExclusions += excludedClassId
+      }
+    }
+
+    if (unmatchedExclusions.isNotEmpty()) {
+      writeDiagnostic({ "merging-unmatched-exclusions-ir-${primaryScope.safePathString}.txt" }) {
+        unmatchedExclusions.map { it.safePathString }.sorted().joinToString("\n")
       }
     }
 
@@ -190,22 +204,51 @@ internal class IrContributionMerger(
       collectReplacements(containerClass)
     }
 
-    for (replacedClassId in classesToReplace) {
-      mutableAllContributions.remove(replacedClassId)
-      mutableContributedBindingContainers.remove(replacedClassId)
+    val unmatchedReplacements = mutableSetOf<ClassId>()
+
+    fun removeReplacement(replacedClassId: ClassId) {
+      val removedContribution = mutableAllContributions.remove(replacedClassId)
+      val removedContainer = mutableContributedBindingContainers.remove(replacedClassId)
 
       // Remove contributions that have @Origin annotation pointing to the replaced class
-      originToContributions[replacedClassId]?.forEach { contributionId ->
+      val originContributions = originToContributions[replacedClassId]
+      originContributions?.forEach { contributionId ->
         mutableAllContributions.remove(contributionId)
         mutableContributedBindingContainers.remove(contributionId)
       }
+
+      // Track unmatched if nothing was removed
+      if (removedContribution == null && removedContainer == null && originContributions == null) {
+        unmatchedReplacements += replacedClassId
+      }
+    }
+
+    for (replacedClassId in classesToReplace) {
+      removeReplacement(replacedClassId)
     }
 
     // Process rank-based replacements if Dagger-Anvil interop is enabled
     if (options.enableDaggerAnvilInterop) {
+      val unmatchedRankReplacements = mutableSetOf<ClassId>()
       val rankReplacements = processRankBasedReplacements(allScopes, mutableAllContributions)
       for (replacedClassId in rankReplacements) {
-        mutableAllContributions.remove(replacedClassId)
+        if (mutableAllContributions.remove(replacedClassId) == null) {
+          unmatchedRankReplacements += replacedClassId
+        }
+      }
+
+      if (unmatchedRankReplacements.isNotEmpty()) {
+        writeDiagnostic({
+          "merging-unmatched-rank-replacements-ir-${primaryScope.safePathString}.txt"
+        }) {
+          unmatchedRankReplacements.map { it.safePathString }.sorted().joinToString("\n")
+        }
+      }
+    }
+
+    if (unmatchedReplacements.isNotEmpty()) {
+      writeDiagnostic({ "merging-unmatched-replacements-ir-${primaryScope.safePathString}.txt" }) {
+        unmatchedReplacements.map { it.safePathString }.sorted().joinToString("\n")
       }
     }
 
