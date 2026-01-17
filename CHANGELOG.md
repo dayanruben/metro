@@ -4,12 +4,20 @@ Changelog
 **Unreleased**
 --------------
 
-### New
+### Behavior Changes
 
+- Enable `contributesAsInject` by default. See its docs for more details, but in short this means that `@Inject` is now optional on `@ContributesBinding`, `@ContributesIntoSet`, and `@ContributesIntoMap` annotated declarations.
+  ```kotlin
+  @ContributesBinding(AppScope::class)
+  // @Inject // <-- now implicit!
+  class TacoImpl(...) : Taco
+  ```
 - [Gradle / FIR] Enable FIR hint generation by default on Kotlin `2.3.20-Beta1` or later.
   - By extension, this resolves Metro's most subscribed issue ([#460](https://github.com/ZacSweers/metro/issues/460)) by enabling cross-module contribution/aggregation features in non-jvm/android compilations 🎉.
   - Note that there is a separate known kotlinc issue around qualifier annotations that affects native builds and is targeted for `2.3.20-Beta2`. Follow [#1556](https://github.com/ZacSweers/metro/issues/1556) for updates.
 - [Gradle / FIR] Enable top-level function injection by default on Kotlin `2.3.20-Beta1` or later.
+
+### New
 
 ### Enhancements
 
@@ -51,17 +59,12 @@ Changelog
 - [IC] Record lookups of contributed classes when looking up hints from IR. Previously Metro only recorded a lookup of the generated hint function, which appears to not be enough for Kotlin 2.3.20.
 - [IC] Link IR-generated hint function files back to source class via expect-actual tracker to link their compilations. This fixes an edge case where simply changing a contribution scope (or removing it) could leave behind a stale hint file that downstream compilations would incidentally read.
 
-### Changes
+### Misc Changes
 
-- Enable `contributesAsInject` by default. See its docs for more details, but in short this means that `@Inject` is now optional on `@ContributesBinding`, `@ContributesIntoSet`, and `@ContributesIntoMap` annotated declarations.
-  ```kotlin
-  @ContributesBinding(AppScope::class)
-  // @Inject // <-- now implicit!
-  class TacoImpl(...) : Taco
-  ```
 - [IR] Already mentioned above, but worth calling out again — creator-less scoped graph extensions _are no longer cached_ in their parent graphs. Accessors to this will always get new instances now.
 - [IR] Report log files reported from within graph generation now use snake-cased fully-qualified names of the impl graph as the file name suffix.
 - [IR] Do not report similar bindings when a missing binding has type `kotlin.Any`. In practice this reported all available bindings.
+- [Docs] Publish kdocs for guice/jakarta/javax interop and metrox artifacts to doc site.
 - Test Kotlin `2.3.20-Beta1`.
 
 ### Contributors
