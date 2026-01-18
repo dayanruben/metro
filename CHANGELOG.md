@@ -53,6 +53,7 @@ Changelog
   ```
 - **[IR]** Avoid generating unnecessary `Provider` refcounts for bindings only used by graph injector functions.
 - **[IR]** When reporting graph failures in dynamic graphs, report the original call location in error reporting.
+- **[IR]** Optimize equals/hashCode in type keys. Benchmarks show a ~2% macro improvement.
 - **[IR/Sharding]** Rebalance shard groups after computing shard bindings.
 
 ### Fixes
