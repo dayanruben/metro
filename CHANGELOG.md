@@ -21,7 +21,9 @@ Changelog
 
 - Support `Map<K, Lazy<V>>` and `Map<K, Provider<Lazy<V>>` multibindings expressions.
 - **[FIR/IR]** Report diagnostics for unmatched exclusions and replacements during contribution merging. These are written to `reportsDestination` if enabled, and should be used for debugging only.
-- **[IR]** Add an `unusedGraphInputsSeverity` option to report diagnostics for unused _direct_ graph inputs. This includes any `@Provides` or `@Includes` parameters to graph factories or managed binding containers declared via the `@DependencyGraph.includes` annotation.
+- **[IR / Gradle]** Add new experimental `enableSwitchingProviders` option. If enabled, this changes code generation to use "switching providers" to defer classloading until a giving binding is actually requested.
+  - This is analogous to Dagger's `fastInit` feature.
+- **[IR / Gradle]** Add an `unusedGraphInputsSeverity` option to report diagnostics for unused _direct_ graph inputs. This includes any `@Provides` or `@Includes` parameters to graph factories or managed binding containers declared via the `@DependencyGraph.includes` annotation.
     - This is in addition to the existing `reportsDestination`-only diagnostic for unused bindings, but limited to bindings that we _know_ are not reused elsewhere and can thus safely soft-enforce at compile-time.
     - This matches a similar feature in Dagger.
 
@@ -48,7 +50,7 @@ Changelog
       - Source:         com.example.navigation.NavigationProviders.navigationSerializationModule
       - Mirror param:   @com.example.app.navigation.NavigationSerializers kotlin.collections.Set<kotlinx.serialization.modules.SerializersModule>
       - create() param: kotlin.collections.Set<kotlinx.serialization.modules.SerializersModule>
-  
+
     This is a known bug in the Kotlin compiler, follow https://github.com/ZacSweers/metro/issues/1556
     ```
 - **[IR]** Avoid generating unnecessary `Provider` refcounts for bindings only used by graph injector functions.
