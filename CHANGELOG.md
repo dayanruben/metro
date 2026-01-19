@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+0.10.0
+------
+
+_2026-01-19_
+
 ### Behavior Changes
 
 - Enable `contributesAsInject` by default. See its docs for more details, but in short this means that `@Inject` is now optional on `@ContributesBinding`, `@ContributesIntoSet`, and `@ContributesIntoMap` annotated declarations.
@@ -85,10 +90,17 @@ Changelog
 - **[interop-dagger]** Update to Dagger `2.58`.
 - **[Docs]** Publish kdocs for guice/jakarta/javax interop and metrox artifacts to doc site.
 - **[Docs]** Expand IDE support docs.
+- **[Docs]** Update `adoption.md` docs about subcomponents interop.
 - Test Kotlin `2.3.10-RC`.
 - Test Kotlin `2.3.20-Beta1`.
 
 ### Contributors
+
+Special thanks to the following contributors for contributing to this release!
+
+- [@neworld](https://github.com/neworld)
+- [@JoelWilcox](https://github.com/JoelWilcox)
+- [@C2H6O](https://github.com/C2H6O)
 
 0.9.4
 -----
