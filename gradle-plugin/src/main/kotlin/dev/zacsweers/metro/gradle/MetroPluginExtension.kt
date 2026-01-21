@@ -435,7 +435,7 @@ constructor(
     return property(Int::class.java).propertyNameConventionImpl(name, defaultValue, String::toInt)
   }
 
-  private fun <T> Property<T>.propertyNameConventionImpl(
+  private fun <T : Any> Property<T>.propertyNameConventionImpl(
     propertyName: String,
     defaultValue: T,
     mapper: (String) -> T,
