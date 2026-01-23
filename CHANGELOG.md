@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+0.10.1
+------
+
+_2026-01-23_
+
 ### Enhancements
 
 - **[IR]** Add a dedicated `UNUSED_GRAPH_INPUT` diagnostic for `unusedGraphInputsSeverity` option.
@@ -22,6 +27,16 @@ Changelog
 - **[IR]** When reporting unused graph inputs on graph extensions, report the diagnostic on the original source declaration if possible.
 - **[IR/Native]** Fix parameter type equality check in native compilations in constructor-injected class factories.
 - **[IR/Compat]** Fix compatibiltiy for source-less diagnostics in Kotlin `2.3.20-Beta1`.
+
+### Contributors
+
+Special thanks to the following contributors for contributing to this release!
+
+- [@JoelWilcox](https://github.com/JoelWilcox)
+- [@japplin](https://github.com/japplin)
+- [@kevinguitar](https://github.com/kevinguitar)
+- [@jonamireh](https://github.com/jonamireh)
+- [@zsmb13](https://github.com/zsmb13)
 
 0.10.0
 ------
