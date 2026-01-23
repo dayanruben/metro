@@ -33,6 +33,7 @@ import dev.zacsweers.metro.compiler.ir.graph.generatedGraphExtensionData
 import dev.zacsweers.metro.compiler.ir.implements
 import dev.zacsweers.metro.compiler.ir.irCallConstructorWithSameParameters
 import dev.zacsweers.metro.compiler.ir.irExprBodySafe
+import dev.zacsweers.metro.compiler.ir.isAnnotatedWithAny
 import dev.zacsweers.metro.compiler.ir.isCompanionObject
 import dev.zacsweers.metro.compiler.ir.isExternalParent
 import dev.zacsweers.metro.compiler.ir.metroGraphOrFail
@@ -44,6 +45,7 @@ import dev.zacsweers.metro.compiler.ir.requireSimpleFunction
 import dev.zacsweers.metro.compiler.ir.stubExpressionBody
 import dev.zacsweers.metro.compiler.ir.thisReceiverOrFail
 import dev.zacsweers.metro.compiler.ir.writeDiagnostic
+import dev.zacsweers.metro.compiler.isGraphImpl
 import dev.zacsweers.metro.compiler.mapToSet
 import dev.zacsweers.metro.compiler.memoize
 import dev.zacsweers.metro.compiler.reportCompilerBug
@@ -71,6 +73,7 @@ import org.jetbrains.kotlin.ir.util.companionObject
 import org.jetbrains.kotlin.ir.util.copyTo
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
 import org.jetbrains.kotlin.ir.util.file
+import org.jetbrains.kotlin.ir.util.getAllSuperclasses
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.util.isLocal
 import org.jetbrains.kotlin.ir.util.kotlinFqName
@@ -540,6 +543,8 @@ internal class DependencyGraphTransformer(
     val severity = options.unusedGraphInputsSeverity
     if (!severity.isEnabled) return
 
+    if (unusedKeys.isEmpty()) return
+
     val diagnosticFactory =
       when (severity) {
         MetroOptions.DiagnosticSeverity.WARN -> MetroDiagnostics.UNUSED_GRAPH_INPUT_WARNING
@@ -548,40 +553,48 @@ internal class DependencyGraphTransformer(
         MetroOptions.DiagnosticSeverity.NONE -> return
       }
 
-    if (unusedKeys.isNotEmpty()) {
-      val unusedGraphInputs = unusedKeys.values.filterNotNull().sortedBy { it.typeKey }
+    val unusedGraphInputs = unusedKeys.values.filterNotNull().sortedBy { it.typeKey }
 
-      for (unusedBinding in unusedGraphInputs) {
-        val message = buildString {
-          appendLine("Graph input '${unusedBinding.typeKey}' is unused and can be removed.")
+    for (unusedBinding in unusedGraphInputs) {
+      val message = buildString {
+        appendLine("Graph input '${unusedBinding.typeKey}' is unused and can be removed.")
 
-          // Show a hint of what direct node is including this, if any
-          unusedBinding.typeKey.type.rawTypeOrNull()?.let { containerClass ->
-            // Efficient to call here as it should be already cached
-            val transitivelyIncluded =
-              bindingContainerResolver.getCached(containerClass)?.mapToSet { it.typeKey }.orEmpty()
-            val transitivelyUsed =
-              sortedKeys.intersect(transitivelyIncluded).minus(unusedBinding.typeKey)
-            if (transitivelyUsed.isNotEmpty()) {
-              appendLine()
-              appendLine("(Hint)")
-              appendLine(
-                "The following binding containers *are* used and transitively included by '${unusedBinding.typeKey}'. Consider including them directly instead"
-              )
-              transitivelyUsed.sorted().joinTo(this, separator = "\n", postfix = "\n") { "- $it" }
-            }
+        // Show a hint of what direct node is including this, if any
+        unusedBinding.typeKey.type.rawTypeOrNull()?.let { containerClass ->
+          // Efficient to call here as it should be already cached
+          val transitivelyIncluded =
+            bindingContainerResolver.getCached(containerClass)?.mapToSet { it.typeKey }.orEmpty()
+          val transitivelyUsed =
+            sortedKeys.intersect(transitivelyIncluded).minus(unusedBinding.typeKey)
+          if (transitivelyUsed.isNotEmpty()) {
+            appendLine()
+            appendLine("(Hint)")
+            appendLine(
+              "The following binding containers *are* used and transitively included by '${unusedBinding.typeKey}'. Consider including them directly instead"
+            )
+            transitivelyUsed.sorted().joinTo(this, separator = "\n", postfix = "\n") { "- $it" }
           }
         }
-        unusedBinding.irElement?.let { irElement ->
-          diagnosticReporter.at(irElement, graphDeclaration.file).report(diagnosticFactory, message)
-          continue
-        }
-        reportCompat(
-          irDeclarations = sequenceOf(unusedBinding.reportableDeclaration, graphDeclaration),
-          factory = diagnosticFactory,
-          a = message,
-        )
       }
+      unusedBinding.irElement?.let { irElement ->
+        diagnosticReporter.at(irElement, graphDeclaration.file).report(diagnosticFactory, message)
+        continue
+      }
+
+      val graphDeclarationSource =
+        if (graphDeclaration.origin.isGraphImpl) {
+          graphDeclaration.getAllSuperclasses().find {
+            it.isAnnotatedWithAny(metroSymbols.classIds.graphExtensionAnnotations)
+          }
+        } else {
+          graphDeclaration
+        }
+
+      reportCompat(
+        irDeclarations = sequenceOf(unusedBinding.reportableDeclaration, graphDeclarationSource),
+        factory = diagnosticFactory,
+        a = message,
+      )
     }
   }
 
