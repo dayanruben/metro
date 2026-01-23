@@ -3,6 +3,7 @@
 package dev.zacsweers.metro.compiler.ir.graph
 
 import androidx.collection.ScatterMap
+import dev.zacsweers.metro.compiler.alsoIf
 import dev.zacsweers.metro.compiler.fir.MetroDiagnostics
 import dev.zacsweers.metro.compiler.getAndAdd
 import dev.zacsweers.metro.compiler.getOrInit
@@ -12,6 +13,7 @@ import dev.zacsweers.metro.compiler.ir.IrAnnotation
 import dev.zacsweers.metro.compiler.ir.IrContextualTypeKey
 import dev.zacsweers.metro.compiler.ir.IrMetroContext
 import dev.zacsweers.metro.compiler.ir.IrTypeKey
+import dev.zacsweers.metro.compiler.ir.NOOP_TYPE_REMAPPER
 import dev.zacsweers.metro.compiler.ir.ParentContext
 import dev.zacsweers.metro.compiler.ir.allowEmpty
 import dev.zacsweers.metro.compiler.ir.asContextualTypeKey
@@ -767,7 +769,10 @@ internal class BindingLookup(
         }
 
         val binding =
-          irClass.cachedConstructorInjectedBinding
+          irClass.cachedConstructorInjectedBinding.takeIf {
+            // Allow use of cached instances if no generics
+            remapper == NOOP_TYPE_REMAPPER
+          }
             ?: IrBinding.ConstructorInjected(
                 type = irClass,
                 classFactory = mappedFactory,
@@ -776,7 +781,9 @@ internal class BindingLookup(
                 injectedMembers =
                   membersInjectBindings.value.mapToSet { binding -> binding.contextualTypeKey },
               )
-              .also { irClass.cachedConstructorInjectedBinding = it }
+              .alsoIf(remapper == NOOP_TYPE_REMAPPER) {
+                irClass.cachedConstructorInjectedBinding = it
+              }
 
         bindings += binding
 
@@ -791,7 +798,10 @@ internal class BindingLookup(
         // inherently deferrable
         val targetContextualTypeKey = IrContextualTypeKey.from(function, wrapInProvider = true)
         bindings +=
-          irClass.cacheAssistedBinding
+          irClass.cacheAssistedBinding.takeIf {
+            // Allow use of cached instances if no generics
+            remapper == NOOP_TYPE_REMAPPER
+          }
             ?: IrBinding.Assisted(
                 type = irClass,
                 function = function,
@@ -800,7 +810,7 @@ internal class BindingLookup(
                 parameters = function.parameters(),
                 target = targetContextualTypeKey,
               )
-              .also { irClass.cacheAssistedBinding = it }
+              .alsoIf(remapper == NOOP_TYPE_REMAPPER) { irClass.cacheAssistedBinding = it }
       } else if (contextKey.hasDefault) {
         bindings += IrBinding.Absent(key)
       } else {
