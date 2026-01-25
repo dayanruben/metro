@@ -3,7 +3,6 @@
 package dev.zacsweers.metro.compiler.fir
 
 import dev.zacsweers.metro.compiler.MetroAnnotations
-import dev.zacsweers.metro.compiler.OptionalBindingBehavior
 import dev.zacsweers.metro.compiler.graph.WrappedType
 import dev.zacsweers.metro.compiler.metroAnnotations
 import dev.zacsweers.metro.compiler.symbols.Symbols
@@ -92,6 +91,7 @@ internal fun FirBasedSymbol<*>.validateBindingSource(
  * @param source The source element for error reporting
  * @return true if validation fails (error was reported), false if validation passes
  */
+@IgnorableReturnValue
 context(context: CheckerContext, reporter: DiagnosticReporter)
 internal fun validateInjectionSiteType(
   session: FirSession,
@@ -162,6 +162,7 @@ internal fun validateInjectionSiteType(
   }
 
   if (!isAccessor && (isOptionalBinding || hasDefault)) {
+    @IgnorableReturnValue
     fun ensureHasDefault(): Boolean {
       return if (!hasDefault) {
         reporter.reportOn(
@@ -179,19 +180,19 @@ internal fun validateInjectionSiteType(
     when (behavior) {
       // If it's disabled, this annotation isn't gonna do anything. Error because it's def not gonna
       // behave the way they expect
-      OptionalBindingBehavior.DISABLED if isOptionalBinding -> {
+      DISABLED if isOptionalBinding -> {
         reporter.reportOn(
           source,
           MetroDiagnostics.OPTIONAL_BINDING_ERROR,
           "@OptionalBinding is disabled in this project.",
         )
       }
-      OptionalBindingBehavior.REQUIRE_OPTIONAL_BINDING -> {
+      REQUIRE_OPTIONAL_BINDING -> {
         // Ensure default
         ensureHasDefault()
       }
       // If it's the default, the annotation is redundant. Just a warning
-      OptionalBindingBehavior.DEFAULT -> {
+      DEFAULT -> {
         // Ensure there's a default value
         val hasDefault = ensureHasDefault()
         if (hasDefault && isOptionalBinding) {

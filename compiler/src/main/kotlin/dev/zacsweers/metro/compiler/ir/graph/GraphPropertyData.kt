@@ -23,6 +23,7 @@ internal enum class PropertyKind {
  * inits, but we always mark them as `val` anyway because the IR code gen will just set the field
  * directly in those cases.
  */
+@IgnorableReturnValue
 context(context: IrMetroContext)
 internal fun IrProperty.ensureInitialized(
   propertyKind: PropertyKind,
@@ -30,7 +31,7 @@ internal fun IrProperty.ensureInitialized(
 ): IrProperty = apply {
   if (backingField == null && getter == null) {
     when (propertyKind) {
-      PropertyKind.FIELD ->
+      FIELD ->
         with(context) {
           addBackingFieldCompat {
             this.type = type
@@ -38,7 +39,7 @@ internal fun IrProperty.ensureInitialized(
             this.visibility = this@ensureInitialized.visibility
           }
         }
-      PropertyKind.GETTER ->
+      GETTER ->
         addGetter {
             this.returnType = type
             this.visibility = this@ensureInitialized.visibility

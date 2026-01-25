@@ -4,7 +4,6 @@ package dev.zacsweers.metro.compiler.ir.transformers
 
 import dev.zacsweers.metro.compiler.ExitProcessingException
 import dev.zacsweers.metro.compiler.MetroLogger
-import dev.zacsweers.metro.compiler.MetroOptions
 import dev.zacsweers.metro.compiler.Origins
 import dev.zacsweers.metro.compiler.expectAs
 import dev.zacsweers.metro.compiler.expectAsOrNull
@@ -199,7 +198,7 @@ internal class DependencyGraphTransformer(
 
     if (!declaration.isCompanionObject) {
       // Companion objects are only processed in the context of their parent classes
-      bindingContainerTransformer.findContainer(declaration)
+      @Suppress("RETURN_VALUE_NOT_USED") bindingContainerTransformer.findContainer(declaration)
     }
 
     val dependencyGraphAnno =
@@ -227,6 +226,7 @@ internal class DependencyGraphTransformer(
           )
       }
     try {
+      @Suppress("RETURN_VALUE_NOT_USED")
       processDependencyGraph(
         dependencyGraphDeclaration,
         dependencyGraphAnno,
@@ -525,7 +525,7 @@ internal class DependencyGraphTransformer(
         val isSelfKey =
           key == node.typeKey || key == node.metroGraph?.generatedGraphExtensionData?.typeKey
         if (!isSelfKey && key in parentContext) {
-          parentContext.mark(key)
+          @Suppress("RETURN_VALUE_NOT_USED") parentContext.mark(key)
         }
       }
     }
@@ -547,10 +547,10 @@ internal class DependencyGraphTransformer(
 
     val diagnosticFactory =
       when (severity) {
-        MetroOptions.DiagnosticSeverity.WARN -> MetroDiagnostics.UNUSED_GRAPH_INPUT_WARNING
-        MetroOptions.DiagnosticSeverity.ERROR -> MetroDiagnostics.UNUSED_GRAPH_INPUT_ERROR
+        WARN -> MetroDiagnostics.UNUSED_GRAPH_INPUT_WARNING
+        ERROR -> MetroDiagnostics.UNUSED_GRAPH_INPUT_ERROR
         // Already checked above, but for exhaustive when
-        MetroOptions.DiagnosticSeverity.NONE -> return
+        NONE -> return
       }
 
     val unusedGraphInputs = unusedKeys.values.filterNotNull().sortedBy { it.typeKey }

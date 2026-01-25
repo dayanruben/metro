@@ -506,11 +506,11 @@ internal class IrBindingGraph(
       realGraph.bindings.forEach { key, value -> put(key, value) }
       // Add cached bindings that aren't already in the graph
       for ((bindingKey, binding) in bindingLookup.getAvailableBindings()) {
-        putIfAbsent(bindingKey, binding)
+        @Suppress("RETURN_VALUE_NOT_USED") putIfAbsent(bindingKey, binding)
       }
       // Add multibindings that have been registered
       for ((bindingKey, binding) in bindingLookup.getAvailableMultibindings()) {
-        putIfAbsent(bindingKey, binding)
+        @Suppress("RETURN_VALUE_NOT_USED") putIfAbsent(bindingKey, binding)
       }
     }
 
@@ -525,6 +525,7 @@ internal class IrBindingGraph(
 
       when {
         bindingKey.type == key.type && key.qualifier != bindingKey.qualifier -> {
+          @Suppress("RETURN_VALUE_NOT_USED")
           similarBindings.putIfAbsent(
             bindingKey,
             SimilarBinding(bindingKey, binding, "Different qualifier"),
@@ -540,6 +541,7 @@ internal class IrBindingGraph(
               (bindingKey.type.type as IrSimpleType).arguments[1].typeOrFail
             }
           if (valueType == key.type) {
+            @Suppress("RETURN_VALUE_NOT_USED")
             similarBindings.putIfAbsent(
               bindingKey,
               SimilarBinding(bindingKey, binding, "Multibinding"),
@@ -553,11 +555,13 @@ internal class IrBindingGraph(
         }
 
         bindingKey.type.isSubtypeOf(key.type, metroContext.irTypeSystemContext) -> {
+          @Suppress("RETURN_VALUE_NOT_USED")
           similarBindings.putIfAbsent(bindingKey, SimilarBinding(bindingKey, binding, "Subtype"))
         }
 
         !bindingKey.type.isAny() &&
           key.type.type.isSubtypeOf(bindingKey.type, metroContext.irTypeSystemContext) -> {
+          @Suppress("RETURN_VALUE_NOT_USED")
           similarBindings.putIfAbsent(bindingKey, SimilarBinding(bindingKey, binding, "Supertype"))
         }
       }
@@ -588,6 +592,7 @@ internal class IrBindingGraph(
           }
 
       if (contributingClass != null) {
+        @Suppress("RETURN_VALUE_NOT_USED")
         similarBindings.putIfAbsent(
           key,
           SimilarBinding(
