@@ -80,7 +80,7 @@ if (metroLocalClone != null) {
       substitute(module("dev.zacsweers.metro:runtime")).using(project(":runtime"))
       substitute(module("dev.zacsweers.metro:gradle-plugin")).using(project(":gradle-plugin"))
       substitute(module("dev.zacsweers.metro:interop-dagger")).using(project(":interop-dagger"))
-      substitute(module("dev.zacsweers.metro:interop-guice")).using(project(":interop-guice"))
+      // Add any other substitutions you need (interop-guice, metrox-*, etc)
     }
   }
 }
