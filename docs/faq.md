@@ -4,9 +4,21 @@ This is a list of frequently asked questions about Metro. Consider also searchin
 
 ### **Compiler plugins are not a stable API, is Metro safe to use?**
 
-This is a fair question! Often times, compiler plugins require new companion releases for each Kotlin release. This is a part of life when using compiler plugins.
+Yes!
 
-Metro takes a slightly different approach to this and tries to support forward compatibility on a best-effort basis. Usually, it's `N+.2` (so a Metro version built against Kotlin `2.3.0` will try to support up to `2.3.20`). This allows Metro to support a reasonable range of Kotlin releases across compiler and IDE versions. See the [compatibility docs](compatibility.md) for more details.
+While it's true that compiler plugins often require strict version alignment, Metro is explicitly architected to avoid this with a robust built-in compatibility system.
+
+Metro maintains forward compatibility on a best-effort basis (typically at least `N+.2` minor versions, often more) rather than locking you to a specific patch version. This allows a single version of Metro to support a broad range of Kotlin releases and IDE plugin versions simultaneously.
+
+!!! tip "Example"
+
+    The current release of Metro (`0.10.1` at the time of writing) supports Kotlin `2.2.20` all the way through `2.3.20-Beta1` (and will support `2.3.20` final).
+    
+    That's five Kotlin versions (`2.2.20`, `2.2.21`, `2.3.0`, `2.3.10`, and `2.3.20`) plus various intermediate versions bundled in the Kotlin IDE plugin.
+
+You can upgrade your Kotlin version (including across minor updates) or use different IDE versions without needing to wait for a matching Metro release. See the [compatibility docs](compatibility.md) for the full support matrix.
+
+In short — it's a wide, moving window of support that periodically raises the minimum, which isn't terribly dissimilar from any other tool.
 
 ### **Metro is not a stable API, is Metro safe to use?**
 
