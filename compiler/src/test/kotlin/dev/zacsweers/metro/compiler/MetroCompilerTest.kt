@@ -320,8 +320,17 @@ abstract class MetroCompilerTest {
               MetroOption.INTEROP_INCLUDE_GUICE_ANNOTATIONS -> {
                 processor.option(entry.raw.cliOption, false)
               }
+              MetroOption.FORCE_ENABLE_FIR_IN_IDE -> {
+                processor.option(entry.raw.cliOption, forceEnableFirInIde)
+              }
               MetroOption.PLUGIN_ORDER_SET -> {
                 processor.option(entry.raw.cliOption, pluginOrderSet?.toString().orEmpty())
+              }
+              MetroOption.COMPILER_VERSION -> {
+                processor.option(
+                  entry.raw.cliOption,
+                  this@toPluginOptions.compilerVersion.orEmpty(),
+                )
               }
             }
           yield(option)

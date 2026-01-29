@@ -754,6 +754,17 @@ internal enum class MetroOption(val raw: RawMetroOption<*>) {
       allowMultipleOccurrences = false,
     )
   ),
+  FORCE_ENABLE_FIR_IN_IDE(
+    RawMetroOption.boolean(
+      name = "force-enable-fir-in-ide",
+      defaultValue = false,
+      valueDescription = "<true | false>",
+      description =
+        "Force enable Metro's FIR extensions in IDE even if the compat layer cannot be determined.",
+      required = false,
+      allowMultipleOccurrences = false,
+    )
+  ),
   PLUGIN_ORDER_SET(
     RawMetroOption(
       name = "plugin-order-set",
@@ -761,6 +772,18 @@ internal enum class MetroOption(val raw: RawMetroOption<*>) {
       valueDescription = "<true | false | empty>",
       description =
         "Internal option indicating whether the plugin order was set before compose-compiler. Empty means unset.",
+      required = false,
+      allowMultipleOccurrences = false,
+      valueMapper = { it },
+    )
+  ),
+  COMPILER_VERSION(
+    RawMetroOption(
+      name = "compiler-version",
+      defaultValue = "",
+      valueDescription = "<version>",
+      description =
+        "Override the Kotlin compiler version Metro operates with. If set, Metro will behave as if running in this Kotlin environment (e.g., 2.3.20-dev-1234).",
       required = false,
       allowMultipleOccurrences = false,
       valueMapper = { it },
@@ -911,11 +934,15 @@ public data class MetroOptions(
   public val enableKlibParamsCheck: Boolean =
     MetroOption.ENABLE_KLIB_PARAMS_CHECK.raw.defaultValue.expectAs(),
   public val patchKlibParams: Boolean = MetroOption.PATCH_KLIB_PARAMS.raw.defaultValue.expectAs(),
+  public val forceEnableFirInIde: Boolean =
+    MetroOption.FORCE_ENABLE_FIR_IN_IDE.raw.defaultValue.expectAs(),
   public val pluginOrderSet: Boolean? =
     MetroOption.PLUGIN_ORDER_SET.raw.defaultValue
       .expectAs<String>()
       .takeUnless(String::isBlank)
       ?.toBooleanStrict(),
+  public val compilerVersion: String? =
+    MetroOption.COMPILER_VERSION.raw.defaultValue.expectAs<String>().takeUnless(String::isBlank),
 ) {
 
   public val reportsEnabled: Boolean
@@ -1015,7 +1042,9 @@ public data class MetroOptions(
     public var contributesAsInject: Boolean = base.contributesAsInject
     public var enableKlibParamsCheck: Boolean = base.enableKlibParamsCheck
     public var patchKlibParams: Boolean = base.patchKlibParams
+    public var forceEnableFirInIde: Boolean = base.forceEnableFirInIde
     public var pluginOrderSet: Boolean? = base.pluginOrderSet
+    public var compilerVersion: String? = base.compilerVersion
 
     private fun FqName.classId(name: String): ClassId {
       return ClassId(this, Name.identifier(name))
@@ -1188,7 +1217,9 @@ public data class MetroOptions(
         contributesAsInject = contributesAsInject,
         enableKlibParamsCheck = enableKlibParamsCheck,
         patchKlibParams = patchKlibParams,
+        forceEnableFirInIde = forceEnableFirInIde,
         pluginOrderSet = pluginOrderSet,
+        compilerVersion = compilerVersion,
       )
     }
 
@@ -1383,9 +1414,13 @@ public data class MetroOptions(
           INTEROP_INCLUDE_GUICE_ANNOTATIONS -> {
             if (configuration.getAsBoolean(entry)) includeGuiceAnnotations()
           }
+          FORCE_ENABLE_FIR_IN_IDE -> forceEnableFirInIde = configuration.getAsBoolean(entry)
           PLUGIN_ORDER_SET -> {
             pluginOrderSet =
               configuration.getAsString(entry).takeUnless(String::isBlank)?.toBooleanStrict()
+          }
+          COMPILER_VERSION -> {
+            compilerVersion = configuration.getAsString(entry).takeUnless(String::isBlank)
           }
         }
       }

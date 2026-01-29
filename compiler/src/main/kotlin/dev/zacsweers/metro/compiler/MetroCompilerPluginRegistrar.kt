@@ -3,6 +3,7 @@
 package dev.zacsweers.metro.compiler
 
 import dev.zacsweers.metro.compiler.compat.CompatContext
+import dev.zacsweers.metro.compiler.compat.KotlinToolingVersion
 import dev.zacsweers.metro.compiler.fir.MetroFirExtensionRegistrar
 import dev.zacsweers.metro.compiler.ir.MetroIrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -18,6 +19,16 @@ import org.jetbrains.kotlin.incremental.components.ExpectActualTracker
 
 public class MetroCompilerPluginRegistrar : CompilerPluginRegistrar() {
 
+  private companion object {
+    /**
+     * This is Android Studio canary/nightly builds, which don't report a real version. They do
+     * always have '255' as a patch number though.
+     *
+     * We disable FIR in these by default due to not being able to resolve a real version.
+     */
+    const val ANDROID_STUDIO_CANARY_PATCH = 255
+  }
+
   public val pluginId: String = PLUGIN_ID
 
   override val supportsK2: Boolean
@@ -27,6 +38,22 @@ public class MetroCompilerPluginRegistrar : CompilerPluginRegistrar() {
     val options = MetroOptions.load(configuration)
 
     if (!options.enabled) return
+
+    val version =
+      options.compilerVersion?.let(::KotlinToolingVersion)
+        ?: CompatContext.Factory.loadCompilerVersionOrNull()
+
+    val enableFir =
+      version != null &&
+        (version.patch != ANDROID_STUDIO_CANARY_PATCH || options.forceEnableFirInIde)
+
+    if (!enableFir) {
+      // While the option is about FIR, this really also means we can't/don't enable IR
+      System.err.println(
+        "[METRO] Skipping enabling Metro extensions. Detected Kotlin version: $version"
+      )
+      return
+    }
 
     val classIds = ClassIds.fromOptions(options)
 
@@ -58,10 +85,12 @@ public class MetroCompilerPluginRegistrar : CompilerPluginRegistrar() {
       messageCollector.report(CompilerMessageSeverity.INFO, "Metro options:\n$options")
     }
 
-    val compatContext = CompatContext.getInstance()
+    val compatContext = CompatContext.create(version)
+
     FirExtensionRegistrarAdapter.registerExtension(
       MetroFirExtensionRegistrar(classIds, options, compatContext)
     )
+
     val lookupTracker = configuration.get(CommonConfigurationKeys.LOOKUP_TRACKER)
     val expectActualTracker: ExpectActualTracker =
       configuration.get(
