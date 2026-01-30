@@ -6,6 +6,8 @@ Changelog
 
 ### New
 
+- Metro's compiler now embeds `androidx.tracing` and can produce perfetto traces of its IR transformations
+
 ### Enhancements
 
 - **[IR]**: Use `androidx.collection` primitive and scatter collections in a few more places to further help improve memory performance.

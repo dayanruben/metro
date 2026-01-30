@@ -149,7 +149,7 @@ Below are some results from real-world projects, shared with the developers' per
 
 ## Tracing
 
-If you want to investigate the performance of different stages of Metro's compiler pipeline, you can enable tracing in the Gradle DSL.
+If you want to investigate the performance of Metro's compiler pipeline, you can enable tracing in the Gradle DSL.
 
 ```kotlin
 metro {
@@ -159,7 +159,7 @@ metro {
 
 This will output a Perfetto trace file after the compilation that you can then load into https://ui.perfetto.dev.
 
-Note that these traces probably do require a bit of familiarity with the Metro compiler internals.
+Note that these traces probably do require a bit of familiarity with the Metro compiler internals and only trace the IR transformation layer.
 
 !!! warning
 
