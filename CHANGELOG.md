@@ -7,6 +7,7 @@ Changelog
 ### New
 
 - Metro's compiler now embeds `androidx.tracing` and can produce perfetto traces of its IR transformations
+- **[FIR]**: Metro now does early detection of whether or not it's running in the IDE or CLI. If it's in the IDE, Metro will disable any FIR generators that do not generate user-visible code.
 
 ### Enhancements
 
@@ -29,6 +30,8 @@ Changelog
 - **[IR]**: Rework assisted inject bindings to be encapsulated by their consuming assisted factory bindings in graph validation.
     - This ensures these classes can't accidentally participate in `SwitchingProvider`s or valid cycle breaking with `DelegateFactory`, as both of those require `Provider` types and assisted-inject types' factories don't implement `Provider`.
 - Fold `2.3.20-dev-7791` compat into `2.3.20-Beta2` compat, meaning the former is no longer tested on CI.
+- Test Kotlin `2.3.10`.
+- Drop testing of Kotlin `2.3.10-RC`.
 
 ### Contributors
 
