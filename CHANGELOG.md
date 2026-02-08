@@ -26,6 +26,8 @@ Changelog
 
 ### Fixes
 
+- **[IR]**: Avoid `IllegalStateException: No value parameter found` issues when reconstructing dependency cycle stacks to report cycle errors.
+
 ### Changes
 
 - **[FIR/IR]** Add aliases for a bunch of "known" mappings for Kotlin IDE plugin versions to Kotlin versions. This is still best-effort but should hopefully be more robust, especially in situations like Android Studio canaries (which do not report real Kotlin versions). Please star this issue: https://issuetracker.google.com/issues/474940910
@@ -47,6 +49,7 @@ Special thanks to the following contributors for contributing to this release!
 
 - [@kevinguitar](https://github.com/kevinguitar)
 - [@DaniilPavlenko](https://github.com/DaniilPavlenko)
+- [@heorhiipopov](https://github.com/heorhiipopov)
 
 0.10.2
 ------
