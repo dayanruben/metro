@@ -3,6 +3,7 @@
 package dev.zacsweers.metro.compiler.compat.k230
 
 import dev.zacsweers.metro.compiler.compat.CompatContext
+import dev.zacsweers.metro.compiler.compat.k2220.CompatContextImpl as DelegateType
 import org.jetbrains.kotlin.GeneratedDeclarationKey
 import org.jetbrains.kotlin.KtFakeSourceElementKind
 import org.jetbrains.kotlin.KtSourceElement
@@ -58,7 +59,7 @@ import org.jetbrains.kotlin.ir.util.addFakeOverrides as addFakeOverridesNative
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.Name
 
-public class CompatContextImpl : CompatContext {
+public class CompatContextImpl : CompatContext by DelegateType() {
 
   override fun FirBasedSymbol<*>.getContainingClassSymbol(): FirClassLikeSymbol<*>? {
     return moduleData.session.firProvider.getContainingClass(this)
