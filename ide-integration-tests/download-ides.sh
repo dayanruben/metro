@@ -228,6 +228,10 @@ main() {
   while IFS= read -r line; do
     [[ -z "$line" || "$line" =~ ^# ]] && continue
 
+    # Strip inline comments
+    line="${line%%#*}"
+    line="${line%"${line##*[![:space:]]}"}"
+
     IFS=':' read -r product version filename_prefix <<< "$line"
 
     local info=""

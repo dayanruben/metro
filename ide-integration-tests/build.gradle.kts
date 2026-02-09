@@ -57,9 +57,12 @@ tasks.test {
   // Suppress "Could not find installation home path" warning from Driver SDK logging
   systemProperty("idea.home.path", layout.projectDirectory.asFile.absolutePath)
 
+  // Fork per test to isolate IDE Starter's ShutdownListener, which blocks new tests in the same JVM
+  // after a failure. Without this, retries and subsequent tests are killed.
+  forkEvery = 1
+
   retry {
     maxRetries.set(1)
-    maxFailures.set(1)
     failOnPassedAfterRetry.set(true)
     failOnSkippedAfterRetry.set(true)
   }
