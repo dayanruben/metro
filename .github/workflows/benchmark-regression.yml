@@ -32,8 +32,9 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
             # On push to main: compare HEAD~1 (baseline) vs HEAD (current)
-            echo "baseline_ref=HEAD~1" >> $GITHUB_OUTPUT
-            echo "current_ref=HEAD" >> $GITHUB_OUTPUT
+            # Resolve to absolute SHAs so refs remain valid after git checkout
+            echo "baseline_ref=$(git rev-parse HEAD~1)" >> $GITHUB_OUTPUT
+            echo "current_ref=${{ github.sha }}" >> $GITHUB_OUTPUT
             echo "baseline_name=main~1" >> $GITHUB_OUTPUT
             echo "current_name=main" >> $GITHUB_OUTPUT
           else
@@ -328,6 +329,10 @@ jobs:
             /tmp/benchmark-current/
           retention-days: 7
 
+      - name: Restore original checkout
+        if: always()
+        run: git checkout ${{ github.sha }}
+
   build-benchmark:
     name: "Build Time Benchmark"
     # Run on push to main, or on PRs with 'run-benchmarks' label
@@ -344,8 +349,9 @@ jobs:
         id: refs
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "baseline_ref=HEAD~1" >> $GITHUB_OUTPUT
-            echo "current_ref=HEAD" >> $GITHUB_OUTPUT
+            # Resolve to absolute SHAs so refs remain valid after git checkout
+            echo "baseline_ref=$(git rev-parse HEAD~1)" >> $GITHUB_OUTPUT
+            echo "current_ref=${{ github.sha }}" >> $GITHUB_OUTPUT
             echo "baseline_name=main~1" >> $GITHUB_OUTPUT
             echo "current_name=main" >> $GITHUB_OUTPUT
           else
@@ -542,6 +548,10 @@ jobs:
             /tmp/build-benchmark-baseline/
             /tmp/build-benchmark-current/
           retention-days: 7
+
+      - name: Restore original checkout
+        if: always()
+        run: git checkout ${{ github.sha }}
 
   publish-benchmarks:
     name: "Publish Benchmark Results"
