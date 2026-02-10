@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+0.10.3
+------
+
+_2026-02-09_
+
 ### New
 
 - Metro now has experimental support for Kotlin 2.4.0. At the time of writing, this is only really helpful if you are testing IDE support in IntelliJ 2026.1 EAPs.
