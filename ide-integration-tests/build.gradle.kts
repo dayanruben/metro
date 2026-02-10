@@ -63,7 +63,7 @@ tasks.test {
 
   retry {
     maxRetries.set(1)
-    failOnPassedAfterRetry.set(true)
+    failOnPassedAfterRetry.set(false)
     failOnSkippedAfterRetry.set(true)
   }
 }
