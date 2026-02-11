@@ -38,7 +38,7 @@ body:
         
         A minimally reproducible project is also good, either as a link or attached here. If linking a project, please include the relevant build commands and ensure it uses the latest stable versions of build+kotlin+metro dependencies (or explain why specific versions are necessary).
         
-        If you cannot supply a repro case, it may be difficult or impossible to help. In this event, be as detailed as you can.
+        If you cannot supply a repro case, it may be difficult or impossible to help. In this event, be as detailed as you can and what you've tried (if nothing else, at least acknowledge you could not create a repro).
         
         Please include any relevant stack traces as you can (formatted as code blocks).
     validations:
