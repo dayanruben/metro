@@ -9,6 +9,8 @@ Changelog
 ### Enhancements
 
 - **[FIR]**: Add suspicious scope diagnostics for cases where a developer might accidentally try to contribute to a concrete `@Scope` class or graph-like class, as that's not usually what you want!
+- **[IR]**: Extend conflicting overrides diagnostic in synthetic graphs (graph extension impls, dynamic graphs) to also validate compatible annotations. This catches scenarios where you may accidentally contribute something like a `fun dependency(): Dependency` accessor _and_ `@Provides fun dependency(): Dependency` provider elsewhere, which previously resulted in undefined runtime behavior.
+- **[IR]**: When reporting conflicting override types in synthetic graphs, underline the type and include the source location (when possible) to better indicate the issue.
 
 ### Fixes
 
@@ -17,6 +19,10 @@ Changelog
 - Deprecate the `generateThrowsAnnotations` option and make it no-op. This was only in place when debugging a past kotlin/native issue.
 
 ### Contributors
+
+Special thanks to the following contributors for contributing to this release!
+
+- [@scana](https://github.com/scana)
 
 0.10.3
 ------

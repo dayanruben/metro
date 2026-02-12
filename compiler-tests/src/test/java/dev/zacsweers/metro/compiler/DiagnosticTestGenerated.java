@@ -32,6 +32,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
     }
 
     @Test
+    @TestMetadata("ContributedInterfaceCanShareFunctionNamesWithGraphExtension.kt")
+    public void testContributedInterfaceCanShareFunctionNamesWithGraphExtension() {
+      runTest("compiler-tests/src/test/data/diagnostic/aggregation/ContributedInterfaceCanShareFunctionNamesWithGraphExtension.kt");
+    }
+
+    @Test
     @TestMetadata("ContributesToOnlyPermittedOnInterfacesOrBindingContainers.kt")
     public void testContributesToOnlyPermittedOnInterfacesOrBindingContainers() {
       runTest("compiler-tests/src/test/data/diagnostic/aggregation/ContributesToOnlyPermittedOnInterfacesOrBindingContainers.kt");
