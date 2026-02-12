@@ -91,3 +91,70 @@ Create a `.kt` file under `test/src/data/dump/reports`. These tests verify Metro
    ```
 
 Expected files are named `<testFile>.<reportName>.txt` (e.g., `MyTest.merging-unmatched-replacements-fir-AppGraph.txt`).
+
+## Debugging/FAQ
+
+> I'm trying to figure out what Metro or kotlinc are generating, how can I see that?
+
+Easiest approach is to open the blank `ir/scratch.kt` file, add your repro code there (you can skip the `box` function if any), then run it and look at the generated diff. Remember not to check in these changes though!
+
+You can also run this with the debugger attached and debug code in the compiler.
+
+> How can I simulate incremental compilation?
+
+Unfortunately, these are not the right place :). Those tests belong in `ICTests.kt` and (if appropriate) `BindingContainerICTests.kt` in the `gradle-plugin` subproject.
+
+> How can I simulate multi-module or multi-file compilation?
+
+The pattern for this in compiler tests is using the `FILE:` and `MODULE:` directives.
+
+#### Multi-file
+
+```kotlin
+// FILE: Example.kt
+@Inject class Example
+
+// FILE: AppGraph.kt
+@DependencyGraph
+interface AppGraph {
+  val example: Example
+}
+```
+
+Note you can add java files too if you're testing something with Dagger interop.
+
+#### Multi-module
+
+Module directives have a format of `name(deps)(friends)(dependsOn)`
+
+```kotlin
+// MODULE: lib
+@Inject class Example
+
+// FILE: main(lib)
+@DependencyGraph
+interface AppGraph {
+  val example: Example
+}
+```
+
+Note that `main` is the module that `box()` functions should be added to.
+
+> How can I test interop?
+
+There are a few different interop scenarios that have `MetroDirectives` set up for them (Dagger, Anvil, etc).
+
+The directives generally follow this pattern:
+- `WITH_DAGGER` - enables annotation interop only. Does not _run_ Dagger itself or enable runtime interop with Dagger types.
+- `ENABLE_DAGGER_INTEROP` - enables `WITH_DAGGER` plus runtime interop with Dagger types. Does not _run_ Dagger itself.
+- `ENABLE_DAGGER_KSP` - enables both of the above + enables Dagger KSP. This should be limited to scenarios where you need to test interop with Dagger-generated code.
+
+Anvil and other interop targets have similar directives.
+
+> My IR diagnostics aren't showing up?
+
+There are some cases where IR diagnostics will not show up in the first party test infra yet, namely for cases where you need to report a declaration that has no source. Unfortunately for now these scenarios need to be implemented in the legacy `compiler/src/test` tests as these essentially only emit through stdout.
+
+> Can I test multiplatform/non-JVM backend tests?
+
+Not yet. If you really need to integration-test these you can add them to `samples/integration-tests`.
