@@ -36,3 +36,4 @@ jobs:
           title: Update IDE version mappings
           body: Automated weekly update of ide-mappings.txt with latest IDE Kotlin version aliases.
           add-paths: compiler-compat/ide-mappings.txt
+          token: ${{ secrets.UPDATE_MAPPINGS_PAT }}
