@@ -4,7 +4,10 @@ Changelog
 **Unreleased**
 --------------
 
-### New
+0.10.4
+------
+
+_2026-02-13_
 
 ### Enhancements
 
