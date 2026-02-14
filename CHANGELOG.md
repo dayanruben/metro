@@ -14,6 +14,8 @@ Changelog
 
 ### Changes
 
+- `enableGraphSharding` is now enabled by default. Note this only kicks in (by default) for graphs with 2000+ bindings by default.
+
 ### Contributors
 
 Special thanks to the following contributors for contributing to this release!
