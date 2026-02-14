@@ -289,6 +289,18 @@ constructor(
     objects.booleanProperty("metro.contributesAsInject", true)
 
   /**
+   * Enable/disable deduplication of injected parameters with the same type key in generated
+   * factories. When enabled, if multiple injected parameters share the same type key, only one
+   * parameter is generated in the factory.
+   *
+   * Note that parameters with default values are always included.
+   *
+   * Enabled by default.
+   */
+  public val deduplicateInjectedParams: Property<Boolean> =
+    objects.booleanProperty("metro.deduplicateInjectedParams", true)
+
+  /**
    * Enable/disable klib parameter qualifier checking.
    *
    * This is automatically enabled for Kotlin versions `[2.3.0, 2.3.20-Beta2)` and disabled

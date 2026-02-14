@@ -416,3 +416,20 @@ internal fun IrFunction.memberInjectParameters(
 
 internal fun Parameter.remapTypes(remapper: TypeRemapper): Parameter =
   copy(contextualTypeKey = contextualTypeKey.remapType(remapper))
+
+/**
+ * Deduplicates parameters by [IrTypeKey], keeping one parameter per unique key. Parameters that are
+ * always kept (never deduped):
+ * - Assisted parameters: each is a distinct caller-provided value
+ * - Parameters with [IrContextualTypeKey.hasDefault]: their defaults may differ
+ */
+internal fun List<Parameter>.dedupeParameters(): List<Parameter> {
+  val seenKeys = HashSet<IrTypeKey>(size)
+  return buildList {
+    for (param in this@dedupeParameters) {
+      if (param.isAssisted || param.hasDefault || seenKeys.add(param.typeKey)) {
+        add(param)
+      }
+    }
+  }
+}
