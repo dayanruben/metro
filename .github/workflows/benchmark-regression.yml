@@ -550,12 +550,14 @@ jobs:
           retention-days: 7
 
       - name: Restore original checkout
+        if: always()
         run: git checkout ${{ github.sha }}
 
   publish-benchmarks:
     if: github.repository == 'ZacSweers/metro'
     name: "Publish Benchmark Results"
     # Only run on push to main, after both benchmark jobs complete
+    if: github.event_name == 'push'
     needs: [benchmark, build-benchmark]
     runs-on: ubuntu-latest
 
