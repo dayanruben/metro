@@ -554,6 +554,7 @@ jobs:
         run: git checkout ${{ github.sha }}
 
   publish-benchmarks:
+    if: github.repository == 'ZacSweers/metro'
     name: "Publish Benchmark Results"
     # Only run on push to main, after both benchmark jobs complete
     if: github.event_name == 'push'
