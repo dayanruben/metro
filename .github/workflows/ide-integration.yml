@@ -20,16 +20,11 @@ concurrency:
 
 jobs:
   generate-matrix:
-    if: github.repository == 'ZacSweers/metro'
     name: Generate IDE matrix
-      if: github.repository == 'ZacSweers/metro'
     runs-on: ubuntu-latest
-      if: github.repository == 'ZacSweers/metro'
     outputs:
-      if: github.repository == 'ZacSweers/metro'
       ide-matrix: ${{ steps.matrix.outputs.ide-matrix }}
     steps:
-      if: github.repository == 'ZacSweers/metro'
       - uses: actions/checkout@v6
 
       - name: Generate IDE matrix
@@ -49,15 +44,10 @@ jobs:
           echo "ide-matrix=$json" >> "$GITHUB_OUTPUT"
 
   build-metro:
-    if: github.repository == 'ZacSweers/metro'
     name: Build Metro artifacts
-      if: github.repository == 'ZacSweers/metro'
     runs-on: ubuntu-latest
-      if: github.repository == 'ZacSweers/metro'
     timeout-minutes: 30
-      if: github.repository == 'ZacSweers/metro'
     steps:
-      if: github.repository == 'ZacSweers/metro'
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -79,26 +69,19 @@ jobs:
           retention-days: 1
 
   ide-tests:
-    if: github.repository == 'ZacSweers/metro'
     needs:
-      if: github.repository == 'ZacSweers/metro'
       - generate-matrix
       - build-metro
     name: "IDE / ${{ matrix.ide }}"
-      if: github.repository == 'ZacSweers/metro'
     runs-on: ubuntu-latest
-      if: github.repository == 'ZacSweers/metro'
     strategy:
-      if: github.repository == 'ZacSweers/metro'
       fail-fast: false
       matrix:
         ide: ${{ fromJson(needs.generate-matrix.outputs.ide-matrix) }}
     env:
-      if: github.repository == 'ZacSweers/metro'
       METRO_PREBUILT: true
 
     steps:
-      if: github.repository == 'ZacSweers/metro'
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -151,14 +134,10 @@ jobs:
 
   ide-integration:
     if: always()
-      if: github.repository == 'ZacSweers/metro'
     runs-on: ubuntu-latest
-      if: github.repository == 'ZacSweers/metro'
     needs:
-      if: github.repository == 'ZacSweers/metro'
       - ide-tests
     steps:
-      if: github.repository == 'ZacSweers/metro'
       - name: Check
         run: |
           results=$(tr -d '\n' <<< '${{ toJSON(needs.*.result) }}')

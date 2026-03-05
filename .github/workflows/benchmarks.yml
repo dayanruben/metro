@@ -88,19 +88,14 @@ on:
 jobs:
   # Shared job to validate inputs and build modes string
   validate:
-    if: github.repository == 'ZacSweers/metro'
     name: "Validate inputs"
-      if: github.repository == 'ZacSweers/metro'
     runs-on: ubuntu-latest
-      if: github.repository == 'ZacSweers/metro'
     outputs:
-      if: github.repository == 'ZacSweers/metro'
       modes: ${{ steps.modes.outputs.modes }}
       is_single_ref: ${{ steps.check_mode.outputs.is_single_ref }}
       ref1_is_metro_version: ${{ steps.detect_ref_types.outputs.ref1_is_metro_version }}
       ref2_is_metro_version: ${{ steps.detect_ref_types.outputs.ref2_is_metro_version }}
     steps:
-      if: github.repository == 'ZacSweers/metro'
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -207,17 +202,12 @@ jobs:
 
   # Startup benchmarks using JMH
   startup-benchmarks:
-    if: github.repository == 'ZacSweers/metro'
     name: "${{ !inputs.run-startup-benchmarks && 'Startup (JMH) (skipped)' || (inputs.ref2 && format('Startup (JMH): {0} vs {1}', inputs.ref1, inputs.ref2) || format('Startup (JMH): {0}', inputs.ref1)) }}"
-      if: github.repository == 'ZacSweers/metro'
     runs-on: ubuntu-latest
-      if: github.repository == 'ZacSweers/metro'
     needs: validate
     if: inputs.run-startup-benchmarks
-      if: github.repository == 'ZacSweers/metro'
 
     steps:
-      if: github.repository == 'ZacSweers/metro'
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -330,17 +320,12 @@ jobs:
 
   # Startup benchmarks with R8 minification
   startup-r8-benchmarks:
-    if: github.repository == 'ZacSweers/metro'
     name: "${{ !inputs.run-startup-r8-benchmarks && 'Startup R8 (JMH) (skipped)' || (inputs.ref2 && format('Startup R8 (JMH): {0} vs {1}', inputs.ref1, inputs.ref2) || format('Startup R8 (JMH): {0}', inputs.ref1)) }}"
-      if: github.repository == 'ZacSweers/metro'
     runs-on: ubuntu-latest
-      if: github.repository == 'ZacSweers/metro'
     needs: validate
     if: inputs.run-startup-r8-benchmarks
-      if: github.repository == 'ZacSweers/metro'
 
     steps:
-      if: github.repository == 'ZacSweers/metro'
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -465,17 +450,12 @@ jobs:
 
   # Build benchmarks using Gradle Profiler
   build-benchmarks:
-    if: github.repository == 'ZacSweers/metro'
     name: "${{ !inputs.run-build-benchmarks && 'Build (Gradle Profiler) (skipped)' || (inputs.ref2 && format('Build (Gradle Profiler): {0} vs {1}', inputs.ref1, inputs.ref2) || format('Build (Gradle Profiler): {0}', inputs.ref1)) }}"
-      if: github.repository == 'ZacSweers/metro'
     runs-on: ubuntu-latest
-      if: github.repository == 'ZacSweers/metro'
     needs: validate
     if: inputs.run-build-benchmarks
-      if: github.repository == 'ZacSweers/metro'
 
     steps:
-      if: github.repository == 'ZacSweers/metro'
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -601,17 +581,12 @@ jobs:
   # Multiplatform benchmarks using kotlinx-benchmark (Metro only)
   # For automated regression tracking, see benchmark-regression.yml
   multiplatform-benchmarks:
-    if: github.repository == 'ZacSweers/metro'
     name: "${{ !inputs.run-multiplatform-benchmarks && 'Multiplatform (kotlinx-benchmark) (skipped)' || format('Multiplatform: {0}', inputs.multiplatform-target) }}"
-      if: github.repository == 'ZacSweers/metro'
     runs-on: ${{ inputs.multiplatform-target == 'native' && 'macos-latest' || 'ubuntu-latest' }}
-      if: github.repository == 'ZacSweers/metro'
     needs: validate
     if: inputs.run-multiplatform-benchmarks
-      if: github.repository == 'ZacSweers/metro'
 
     steps:
-      if: github.repository == 'ZacSweers/metro'
       - name: Checkout
         uses: actions/checkout@v6
         with:
