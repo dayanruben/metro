@@ -10,6 +10,8 @@ import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.config.LanguageVersionSettings
+import org.jetbrains.kotlin.diagnostics.DiagnosticContext
+import org.jetbrains.kotlin.diagnostics.KtDiagnostic
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.diagnostics.KtDiagnosticWithoutSource
@@ -451,7 +453,17 @@ public interface CompatContext {
     location: CompilerMessageSourceLocation?,
     languageVersionSettings: LanguageVersionSettings,
   ): KtDiagnosticWithoutSource? {
-    return create(message, languageVersionSettings, location)
+    val context =
+      object : DiagnosticContext {
+        override val containingFilePath: String?
+          get() = null
+
+        override fun isDiagnosticSuppressed(diagnostic: KtDiagnostic): Boolean = false
+
+        override val languageVersionSettings: LanguageVersionSettings
+          get() = languageVersionSettings
+      }
+    return create(message, location, context)
   }
 
   @CompatApi(
