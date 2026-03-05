@@ -24,6 +24,12 @@ jobs:
         with:
           lfs: true
 
+      - name: Setup Gradle
+        uses: ./.github/actions/setup-gradle
+        with:
+          encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
       - name: Check formatting
         run: ./scripts/format.sh --check
 
@@ -160,6 +166,7 @@ jobs:
         run: ./gradlew :runtime:allTests :gradle-plugin:functionalTest --continue --quiet
 
       - name: Check samples
+        if: github.ref == 'refs/heads/main'
         run: ./gradlew -p samples test allTests --continue --quiet
 
       - name: (Fail-only) Upload reports
