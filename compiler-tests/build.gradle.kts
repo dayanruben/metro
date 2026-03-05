@@ -95,15 +95,15 @@ if (testKotlinVersion >= KotlinToolingVersion(KotlinVersion(2, 3))) {
 
 dependencies {
   // 2.3.0 changed the test gen APIs around into different packages
-  "generator220CompileOnly"("org.jetbrains.kotlin:kotlin-compiler-internal-test-framework:2.2.20")
+  "generator220CompileOnly"("org.jetbrains.kotlin:kotlin-compiler-internal-test-framework:2.3.20-RC2")
   "generator230CompileOnly"(
     "org.jetbrains.kotlin:kotlin-compiler-internal-test-framework:$compilerTestFrameworkVersion"
   )
   "generator2320CompileOnly"(
-    "org.jetbrains.kotlin:kotlin-compiler-internal-test-framework:2.3.20-dev-5437"
+    "org.jetbrains.kotlin:kotlin-compiler-internal-test-framework:2.3.20-RC2"
   )
   "generator2320RCCompileOnly"(
-    "org.jetbrains.kotlin:kotlin-compiler-internal-test-framework:2.3.20-RC"
+    "org.jetbrains.kotlin:kotlin-compiler-internal-test-framework:2.3.20-RC2"
   )
 
   testImplementation(sourceSets.named(generatorConfigToUse).map { it.output })

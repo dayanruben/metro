@@ -3,7 +3,7 @@
 plugins {
   // TODO switch back to alias once on kotlin 2.3.20+
   //  alias(libs.plugins.kotlin.jvm)
-  id("org.jetbrains.kotlin.jvm") version "2.3.20-Beta2"
+  id("org.jetbrains.kotlin.jvm") version "2.3.20-RC2"
   id("dev.zacsweers.metro")
 }
 

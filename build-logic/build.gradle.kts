@@ -1,7 +1,7 @@
 // Copyright (C) 2025 Zac Sweers
 // SPDX-License-Identifier: Apache-2.0
 plugins {
-  kotlin("jvm") version "2.2.20" // sigh, gradle
+  kotlin("jvm") version "2.3.20-RC2" // sigh, gradle
   `kotlin-dsl`
 }
 
