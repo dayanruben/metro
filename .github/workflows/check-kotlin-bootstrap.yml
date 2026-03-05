@@ -14,13 +14,10 @@ jobs:
   check-versions:
     if: github.repository == 'ZacSweers/metro'
     runs-on: ubuntu-latest
-      if: github.repository == 'ZacSweers/metro'
     permissions:
-      if: github.repository == 'ZacSweers/metro'
       issues: write
 
     steps:
-      if: github.repository == 'ZacSweers/metro'
       - name: Checkout
         uses: actions/checkout@v6
 
