@@ -451,7 +451,7 @@ public interface CompatContext {
     location: CompilerMessageSourceLocation?,
     languageVersionSettings: LanguageVersionSettings,
   ): KtDiagnosticWithoutSource? {
-    return create(message, languageVersionSettings)
+    return create(message, location)
   }
 
   @CompatApi(
