@@ -145,7 +145,6 @@ jobs:
         run: echo "Skipping multiplatform tests on PRs to reduce CI time"
 
       - name: Checkout
-        if: github.ref == 'refs/heads/main'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Gradle
@@ -161,7 +160,6 @@ jobs:
         run: ./gradlew :runtime:allTests :gradle-plugin:functionalTest --continue --quiet
 
       - name: Check samples
-        if: github.ref == 'refs/heads/main'
         run: ./gradlew -p samples test allTests --continue --quiet
 
       - name: (Fail-only) Upload reports
@@ -227,7 +225,6 @@ jobs:
           fi
 
   publish:
-    if: github.repository == 'ZacSweers/metro'
     name: Publish snapshot (main only)
     runs-on: macos-latest
     if: github.ref == 'refs/heads/main' && github.repository == 'zacsweers/metro'
