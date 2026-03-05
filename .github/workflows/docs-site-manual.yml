@@ -30,8 +30,11 @@ concurrency:
 jobs:
   # Manual docs site deployment job
   docs-site-manual:
+    if: github.repository == 'ZacSweers/metro'
     runs-on: ubuntu-latest
+      if: github.repository == 'ZacSweers/metro'
     steps:
+      if: github.repository == 'ZacSweers/metro'
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
