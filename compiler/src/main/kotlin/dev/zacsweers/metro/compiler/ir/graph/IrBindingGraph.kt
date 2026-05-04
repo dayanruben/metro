@@ -1300,7 +1300,7 @@ internal class IrBindingGraph(
         append(")")
         binding?.let {
           append(". Type: ")
-          append(binding.javaClass.simpleName)
+          append(binding.diagnosticTypeName)
           append('.')
           if (binding is IrBinding.Provided) {
             binding.isFromGeneratedContributionImpl()?.let { origin ->
