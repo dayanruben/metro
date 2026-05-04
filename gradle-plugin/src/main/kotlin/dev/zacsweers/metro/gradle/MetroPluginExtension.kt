@@ -391,6 +391,8 @@ constructor(
    * generated provider directly constructs them (which in turn allows for finer grained IC).
    *
    * Disabled by default.
+   *
+   * Test
    */
   @ExperimentalMetroGradleApi
   public val generateContributionProviders: Property<Boolean> =
