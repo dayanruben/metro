@@ -394,7 +394,6 @@ constructor(
    */
   @ExperimentalMetroGradleApi
   public val generateContributionProviders: Property<Boolean> =
-
     objects.booleanProperty("metro.generateContributionProviders", false)
 
   /**
