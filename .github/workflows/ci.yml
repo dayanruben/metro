@@ -138,6 +138,10 @@ jobs:
           encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           konan: true
+          # Without per-target prefixing, the 3 matrix targets would all share `Linux-konan-<hash>`
+          # and contend on save. Only `linuxX64` actually populates konan/, but keeping the prefix
+          # for all 3 keeps cache hits target-specific and avoids the ReserveCacheError noise.
+          konan-cache-prefix: ${{ matrix.target }}
 
       - name: ':gradle-plugin:functionalTest'
         if: github.ref == 'refs/heads/main'
@@ -203,6 +207,12 @@ jobs:
     runs-on: ${{ github.ref == 'refs/heads/main' && matrix.os || 'ubuntu-latest' }}
     permissions:
       checks: write
+    # Windows runners default to PowerShell, which mis-parses gradle `-Pkey.with.dots=value` args
+    # (splits on the dot). Forcing bash everywhere keeps `./gradlew … -P…` consistent across OSes;
+    # Git Bash ships with the Windows runner image.
+    defaults:
+      run:
+        shell: bash
 
     strategy:
       fail-fast: false
