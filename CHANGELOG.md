@@ -65,6 +65,8 @@ Special thanks to the following contributors for contributing to this release!
 - [@hossain-khan](https://github.com/hossain-khan)
 - [@VirtualParticle](https://github.com/VirtualParticle)
 
+### [Consider sponsoring Metro's development](https://www.zacsweers.dev/sponsoring-metro/)
+
 1.0.0
 -----
 
