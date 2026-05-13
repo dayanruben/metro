@@ -14,8 +14,8 @@ Pre-release versions are normally only tested during their development cycle. Af
 | 2.4.0-dev-2124  | 0.12.0 -                   |                                                       |
 | 2.4.0-dev-539   | 0.10.3 - [0.11.3]          |                                                       |
 | 2.3.21          | 0.10.0 -                   | Top-level declaration gen in JS only works in 0.12.1+ |
-| 2.3.21-RC2      | 0.10.0 -                   | Top-level declaration gen in JS only works in 0.12.1+ |
-| 2.3.21-RC       | 0.10.0 -                   | Top-level declaration gen in JS only works in 0.12.1+ |
+| 2.3.21-RC2      | 0.10.0 - [1.0.0]           | Top-level declaration gen in JS only works in 0.12.1+ |
+| 2.3.21-RC       | 0.10.0 - [1.0.0]           | Top-level declaration gen in JS only works in 0.12.1+ |
 | 2.3.20          | 0.10.0 -                   |                                                       |
 | 2.3.20-RC3      | 0.10.0 - [0.11.3]          |                                                       |
 | 2.3.20-RC2      | 0.10.0 - [0.11.3]          |                                                       |
