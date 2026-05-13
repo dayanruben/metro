@@ -228,7 +228,8 @@ case "$1" in
        kempt format --all
 
        # apiDump only exists in root project
-       ./gradlew apiDump --rerun-tasks --no-build-cache --no-configuration-cache --quiet "$version_flag"
+       # shellcheck disable=SC2086  # Word splitting is intentional so empty version_flag drops out
+       ./gradlew apiDump --rerun-tasks --no-build-cache --no-configuration-cache --quiet $version_flag
 
        # Yarn locks only in root and samples
        run_gradle_all "kotlinWasmUpgradePackageLock kotlinUpgradePackageLock --rerun-tasks --no-build-cache --no-configuration-cache --quiet $version_flag" "samples"
