@@ -27,3 +27,12 @@ if (project.path != ":compiler") {
 tasks
   .named { it.startsWith("publish") && it.contains("PublicationTo") }
   .configureEach { mustRunAfter(tasks.matching { it.name.startsWith("sign") }) }
+
+// `testKitSupportForJava` is only meant for the local FunctionalTest repo; don't let it publish
+// to Maven Central where it would race the real `maven` publication at the same coordinates.
+// The symmetric `maven` -> FunctionalTest task is left enabled: modules where artifactId matches
+// project.name (e.g. `:compiler`) don't get a `testKitSupportForJava` pub at all, so that task is
+// the only thing installing them into the FunctionalTest repo.
+tasks
+  .matching { it.name == "publishTestKitSupportForJavaPublicationToMavenCentralRepository" }
+  .configureEach { enabled = false }
