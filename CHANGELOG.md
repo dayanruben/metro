@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+1.1.1
+-----
+
+_2026-05-14_
+
 ### Changes
 
 - Update runtime artifacts' language and API version to 2.3.0. This was supposed to be in 1.1.0 but accidentally omitted, sorry!
