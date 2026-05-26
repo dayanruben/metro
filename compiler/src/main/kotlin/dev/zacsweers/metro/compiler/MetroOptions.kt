@@ -920,6 +920,22 @@ internal enum class MetroOption(val raw: RawMetroOption<*>) {
       required = false,
       allowMultipleOccurrences = false,
     )
+  ),
+  MEMBER_NAMING_STRATEGY(
+    RawMetroOption(
+      name = "member-naming-strategy",
+      defaultValue = MemberNamingStrategy.DESCRIPTIVE.name,
+      valueDescription = MemberNamingStrategy.entries.joinToString("|"),
+      description =
+        "Strategy for naming generated provider/instance/factory fields in graph, factory, and " +
+          "members-injector classes. DESCRIPTIVE keeps names derived from types/parameters; " +
+          "TYPED uses short typed prefixes (provider*, instance*, factory*); MINIMAL collapses " +
+          "all kinds to a single short vocabulary. Nested-shard graphs always collapse to MINIMAL " +
+          "when the strategy is not DESCRIPTIVE. Default is DESCRIPTIVE.",
+      required = false,
+      allowMultipleOccurrences = false,
+      valueMapper = { it },
+    )
   );
 
   companion object {
@@ -1095,6 +1111,10 @@ public data class MetroOptions(
     MetroOption.GENERATE_STATIC_ANNOTATIONS.raw.defaultValue.expectAs(),
   public val bindingContributionsAsContainers: Boolean =
     MetroOption.BINDING_CONTRIBUTIONS_AS_CONTAINERS.raw.defaultValue.expectAs(),
+  public val memberNamingStrategy: MemberNamingStrategy =
+    MetroOption.MEMBER_NAMING_STRATEGY.raw.defaultValue.expectAs<String>().let {
+      MemberNamingStrategy.valueOf(it.uppercase(Locale.US))
+    },
 ) {
 
   public val reportsEnabled: Boolean
@@ -1217,6 +1237,7 @@ public data class MetroOptions(
     public var richDiagnostics: Boolean = base.richDiagnostics
     public var generateStaticAnnotations: Boolean = base.generateStaticAnnotations
     public var bindingContributionsAsContainers: Boolean = base.bindingContributionsAsContainers
+    public var memberNamingStrategy: MemberNamingStrategy = base.memberNamingStrategy
 
     private fun FqName.classId(name: String): ClassId {
       return ClassId(this, Name.identifier(name))
@@ -1410,6 +1431,7 @@ public data class MetroOptions(
         richDiagnostics = richDiagnostics,
         generateStaticAnnotations = generateStaticAnnotations,
         bindingContributionsAsContainers = bindingContributionsAsContainers,
+        memberNamingStrategy = memberNamingStrategy,
       )
     }
 
@@ -1728,6 +1750,11 @@ public data class MetroOptions(
             generateStaticAnnotations = configuration.getAsBoolean(entry)
           BINDING_CONTRIBUTIONS_AS_CONTAINERS ->
             bindingContributionsAsContainers = configuration.getAsBoolean(entry)
+          MEMBER_NAMING_STRATEGY ->
+            memberNamingStrategy =
+              configuration.getAsString(entry).let {
+                MemberNamingStrategy.valueOf(it.uppercase(Locale.US))
+              }
         }
       }
     }

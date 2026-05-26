@@ -375,6 +375,9 @@ abstract class MetroCompilerTest {
                   this@toPluginOptions.bindingContributionsAsContainers,
                 )
               }
+              MEMBER_NAMING_STRATEGY -> {
+                processor.option(entry.raw.cliOption, this@toPluginOptions.memberNamingStrategy)
+              }
             }
           yield(option)
         }
