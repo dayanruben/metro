@@ -54,13 +54,13 @@ import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrConstructorSymbol
 import org.jetbrains.kotlin.ir.types.IrType
-import org.jetbrains.kotlin.ir.types.typeWith
 import org.jetbrains.kotlin.ir.types.typeWithParameters
 import org.jetbrains.kotlin.ir.util.classId
 import org.jetbrains.kotlin.ir.util.copyParametersFrom
 import org.jetbrains.kotlin.ir.util.copyTo
 import org.jetbrains.kotlin.ir.util.copyTypeParametersFrom
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
+import org.jetbrains.kotlin.ir.util.defaultType
 import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.isObject
 import org.jetbrains.kotlin.ir.util.nonDispatchParameters
@@ -408,14 +408,12 @@ internal fun generateStubCreatorFunctions(
   val params = sourceFunction.parameters().regularParameters
 
   // create() function, parameters are Provider-wrapped
-  creatorClass
-    .addFunction(Symbols.StringNames.CREATE, context.metroSymbols.metroFactory.typeWith(returnType))
-    .apply {
-      setDispatchReceiver(creatorClass.thisReceiverOrFail.copyTo(this))
-      addParameters(params, wrapInProvider = true, copyQualifiers = true)
-      addStaticAnnotations(this)
-      body = context.createIrBuilder(symbol).run { irExprBodySafe(stubExpression()) }
-    }
+  creatorClass.addFunction(Symbols.StringNames.CREATE, factoryClass.defaultType).apply {
+    setDispatchReceiver(creatorClass.thisReceiverOrFail.copyTo(this))
+    addParameters(params, wrapInProvider = true, copyQualifiers = true)
+    addStaticAnnotations(this)
+    body = context.createIrBuilder(symbol).run { irExprBodySafe(stubExpression()) }
+  }
 
   // Named function (e.g., "provideImplAsBase")
   creatorClass.addFunction(callableName, returnType).apply {
