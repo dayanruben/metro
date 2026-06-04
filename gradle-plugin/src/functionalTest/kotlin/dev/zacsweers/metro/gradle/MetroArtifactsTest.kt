@@ -13,7 +13,60 @@ import org.junit.Test
 
 class MetroArtifactsTest {
   @Test
+  fun `metroEnv task creates human-readable output`() {
+    val fixture =
+      object : MetroProject(multiplatform = false) {
+        override fun sources() =
+          listOf(
+            source(
+              """
+              @DependencyGraph
+              interface AppGraph
+              """,
+              "AppGraph",
+            )
+          )
+      }
+
+    val project = fixture.gradleProject
+
+    build(project.rootDir, "metroEnv")
+
+    val report =
+      project.rootDir
+        .toPath()
+        .resolve("build/reports/metro/env")
+        .toFile()
+        .walk()
+        .single { it.name == "main.txt" }
+        .toPath()
+    assertTrue(report.exists(), "Metro environment report should exist")
+
+    val content = report.readText()
+    assertThat(content).contains("Metro environment report")
+    assertThat(content).contains("Project")
+    assertThat(content).contains("Versions")
+    assertThat(content).contains("Kotlin compiler options")
+    assertThat(content).contains("Metro compiler plugin options")
+    assertThat(content).contains("  compilation: main")
+    assertThat(content).contains("    enabled = true")
+    assertThat(content).contains("    reports-destination = ")
+  }
+
+  @Test
   fun `generateMetroGraphMetadata task creates aggregated JSON output`() {
+    val testCompilerVersion = getTestCompilerToolingVersion()
+    val topLevelFirGenEnabled =
+      if (testCompilerVersion.isDev) {
+        testCompilerVersion >= KotlinToolingVersion("2.3.20-dev-6204")
+      } else {
+        testCompilerVersion >= KotlinToolingVersion("2.3.20-Beta1")
+      }
+    val enableKlibParamsCheck =
+      testCompilerVersion >= KotlinToolingVersion("2.3.0") &&
+        testCompilerVersion < KotlinToolingVersion("2.3.20-Beta2")
+    val patchKlibParams = true
+
     val fixture =
       object : MetroProject(multiplatform = false) {
         override fun sources() =
@@ -70,6 +123,111 @@ class MetroArtifactsTest {
                 "factoryAccessors": [],
                 "factoriesImplemented": []
               },
+              "config": {
+                "debug": false,
+                "enabled": true,
+                "generateAssistedFactories": false,
+                "enableTopLevelFunctionInjection": $topLevelFirGenEnabled,
+                "generateContributionHints": true,
+                "generateContributionHintsInFir": $topLevelFirGenEnabled,
+                "shrinkUnusedBindings": true,
+                "statementsPerInitFun": 25,
+                "enableGraphSharding": true,
+                "keysPerGraphShard": 2000,
+                "mergedSupertypeChunkSize": 0,
+                "enableSwitchingProviders": false,
+                "publicScopedProviderSeverity": "NONE",
+                "nonPublicContributionSeverity": "NONE",
+                "optionalBindingBehavior": "DEFAULT",
+                "warnOnInjectAnnotationPlacement": true,
+                "interopAnnotationsNamedArgSeverity": "NONE",
+                "unusedGraphInputsSeverity": "WARN",
+                "enabledLoggers": [],
+                "enableDaggerRuntimeInterop": false,
+                "enableGuiceRuntimeInterop": false,
+                "maxIrErrorsCount": 20,
+                "customProviderTypes": [],
+                "customLazyTypes": [],
+                "customAssistedAnnotations": [],
+                "customAssistedFactoryAnnotations": [],
+                "customAssistedInjectAnnotations": [],
+                "customBindsAnnotations": [],
+                "customContributesToAnnotations": [],
+                "customContributesBindingAnnotations": [],
+                "customContributesIntoSetAnnotations": [],
+                "customGraphExtensionAnnotations": [],
+                "customGraphExtensionFactoryAnnotations": [],
+                "customElementsIntoSetAnnotations": [],
+                "customGraphAnnotations": [],
+                "customGraphFactoryAnnotations": [],
+                "customInjectAnnotations": [],
+                "customIntoMapAnnotations": [],
+                "customIntoSetAnnotations": [],
+                "customMapKeyAnnotations": [],
+                "customMultibindsAnnotations": [],
+                "customProvidesAnnotations": [],
+                "customQualifierAnnotations": [],
+                "customScopeAnnotations": [],
+                "customBindingContainerAnnotations": [],
+                "enableDaggerAnvilInterop": false,
+                "enableFullBindingGraphValidation": false,
+                "enableGraphImplClassAsReturnType": false,
+                "customOriginAnnotations": [],
+                "customOptionalBindingAnnotations": [],
+                "contributesAsInject": true,
+                "enableKlibParamsCheck": $enableKlibParamsCheck,
+                "patchKlibParams": $patchKlibParams,
+                "forceEnableFirInIde": false,
+                "pluginOrderSet": true,
+                "compilerVersionAliases": {},
+                "parallelThreads": 0,
+                "bufferedIcTracking": true,
+                "enableProviderInlining": true,
+                "enableFunctionProviders": true,
+                "desugaredProviderSeverity": "WARN",
+                "enableKClassToClassInterop": false,
+                "generateContributionProviders": false,
+                "enableCircuitCodegen": false,
+                "enableHiltInterop": false,
+                "richDiagnostics": false,
+                "generateStaticAnnotations": true,
+                "bindingContributionsAsContainers": true,
+                "memberNamingStrategy": "DESCRIPTIVE"
+              },
+              "stats": {
+                "providerFactories": 1,
+                "bindsCallables": 0,
+                "multibindsCallables": 0,
+                "optionalBindings": 0,
+                "accessors": 1,
+                "injectors": 0,
+                "graphExtensionAccessors": 0,
+                "graphExtensionFactories": 0,
+                "includedGraphs": 0,
+                "bindingContainers": 0,
+                "dynamicBindings": 0,
+                "graphPrivateKeys": 0,
+                "publishedBindsKeys": 0,
+                "populatedKeys": 2,
+                "validatedKeys": 2,
+                "reachableKeys": 2,
+                "deferredKeys": 0,
+                "unusedInputs": 0,
+                "providerProperties": 0,
+                "scopedProviderProperties": 0,
+                "shards": 0,
+                "optimizations": {
+                  "bindingsPrunedByShrinking": 0,
+                  "classConstructorDirectInvocations": 0,
+                  "classConstructorNewInstanceCalls": 0,
+                  "providerDirectInvocations": 1,
+                  "providerNewInstanceCalls": 0,
+                  "shardsGenerated": 0,
+                  "shardedSupertypes": 0,
+                  "shardedInitFunctions": 0,
+                  "providerInlines": 0
+                }
+              },
               "bindings": [
                 {
                   "key": "kotlin.String",
@@ -84,9 +242,7 @@ class MetroArtifactsTest {
                   ],
                   "isSynthetic": false,
                   "origin": "AppGraph.kt:10:3",
-                  "declaration": "provideValue",
-                  "multibinding": null,
-                  "optionalWrapper": null
+                  "declaration": "provideValue"
                 },
                 {
                   "key": "test.AppGraph",
@@ -96,9 +252,7 @@ class MetroArtifactsTest {
                   "dependencies": [],
                   "isSynthetic": false,
                   "origin": "AppGraph.kt:5:1",
-                  "declaration": "AppGraph",
-                  "multibinding": null,
-                  "optionalWrapper": null
+                  "declaration": "AppGraph"
                 }
               ]
             }

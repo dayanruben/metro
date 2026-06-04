@@ -24,6 +24,8 @@ Changelog
 - **[IR]** Preserve concrete generated provider factory return types where possible instead of widening to `Factory<T>`. In the future, Metro may generate these as value classes and this will allow better compiler optimization in those scenarios.
 - **[IR/IC]** Optimize IC tracking by buffering lookup and expect/actual records during IR and flushing them once after graph validation, avoiding per-write synchronization on the hot path. This is enabled by default but can be disabled via the `buffered-ic-tracking` compiler option if it causes any issues.
 - **[IR/runtime]** Add internal primitive instance factories and use them where possible for primitive graph inputs and inlined providers.
+- **[Gradle]** Add a `metroEnv` task that writes human-readable Metro/Kotlin/Gradle environment reports for bug reports.
+- **[Reporting]** Add compiler stats to reporting.
 
 ### Fixes
 
@@ -34,6 +36,7 @@ Changelog
 
 ### Changes
 
+- **[Gradle]** Add missing experimental annotations to the Gradle plugin's analysis APIs. Sorry these were not meant to be stabilized yet!
 - Build against Kotlin `2.4.0`. Note the runtime artifacts still target Kotlin `2.3.0` and Metro supports a wide range of compiler versions. See the [compatibility docs](https://zacsweers.github.io/metro/latest/compatibility/) for a full table of compatible versions.
 - No longer test Kotlin `2.4.0` pre-release builds. Kotlin `2.4.0-dev-2124` _is_ still tested because this appears to be roughly where IntelliJ platform 2026.1.x branched from.
 
