@@ -52,7 +52,11 @@ Changelog
 
 Special thanks to the following contributors for contributing to this release!
 
+- [@eygraber](https://github.com/eygraber)
 - [@jonamireh](https://github.com/jonamireh)
+- [@kevinguitar](https://github.com/kevinguitar)
+- [@SimonMarquis](https://github.com/SimonMarquis)
+- [@WhosNickDoglio](https://github.com/WhosNickDoglio)
 
 1.1.1
 -----
