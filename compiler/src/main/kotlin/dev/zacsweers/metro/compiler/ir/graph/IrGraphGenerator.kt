@@ -51,7 +51,6 @@ import dev.zacsweers.metro.compiler.ir.thisReceiverOrFail
 import dev.zacsweers.metro.compiler.ir.toProto
 import dev.zacsweers.metro.compiler.ir.trackFunctionCall
 import dev.zacsweers.metro.compiler.ir.typeAsProviderArgument
-import dev.zacsweers.metro.compiler.ir.typeOrNullableAny
 import dev.zacsweers.metro.compiler.ir.withIrBuilder
 import dev.zacsweers.metro.compiler.ir.wrapInProvider
 import dev.zacsweers.metro.compiler.ir.writeDiagnostic
@@ -355,7 +354,11 @@ internal class IrGraphGenerator(
               .orEmpty()
               .toSet()
           val graphProto =
-            node.toProto(bindingGraph = bindingGraph, ownProviderFactories = ownProviderFactories)
+            node.toProto(
+              bindingGraph = bindingGraph,
+              ownProviderFactories = ownProviderFactories,
+              generateClassesInIr = options.generateClassesInIr,
+            )
           graphMetadataReporter.write(
             node,
             bindingGraph,
@@ -1666,10 +1669,6 @@ internal class IrGraphGenerator(
 
                 +irInvoke(
                   callee = function.symbol,
-                  typeArgs =
-                    targetParam.type.requireSimpleType(targetParam).arguments.map {
-                      it.typeOrNullableAny
-                    },
                   args = args,
                 )
               }
