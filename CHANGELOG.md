@@ -17,7 +17,7 @@ _2026-06-10_
     - The eight standard Android Hilt components map to their canonical scopes out of the box.
     - User-declared `@DefineComponent` interfaces are resolved on demand by looking for an annotation on the same interface whose annotation class is itself annotated with `@Scope` (Hilt's own convention).
   - Both consuming Hilt-generated aggregation deps and also treating `@InstallIn` + `@EntryPoint`/`@Module` as interop are supported.
-  - See [the docs](https://zacsweers.github.io/metro/interop/#hilt) for the details and current limitations.
+  - See [the docs](https://zacsweers.github.io/metro/latest/interop/#hilt) for the details and current limitations.
 
 ### Enhancements
 
