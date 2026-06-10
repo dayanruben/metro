@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+1.2.0
+-----
+
+_2026-06-10_
+
 ### New
 
 - **[interop]** This release introduces experimental support for Hilt `@InstallIn` and `@EntryPoint` interop.
@@ -68,6 +73,7 @@ Special thanks to the following contributors for contributing to this release!
 - [@jonamireh](https://github.com/jonamireh)
 - [@kevinguitar](https://github.com/kevinguitar)
 - [@SimonMarquis](https://github.com/SimonMarquis)
+- [@shenghaiyang](https://github.com/shenghaiyang)
 - [@WhosNickDoglio](https://github.com/WhosNickDoglio)
 
 ### [Consider sponsoring Metro's development](https://www.zacsweers.dev/sponsoring-metro/)
