@@ -6,12 +6,23 @@ Changelog
 
 ### New
 
-- Add support for generating metadata-visible classes entirely in IR, allowing Metro to move much of its current FIR code gen entirely to IR. This is enabled by default on Kotlin `2.4.20-dev-6138` or newer and can be configured via the `generateClassesInIr` option.
+- **[IR]** Add support for generating metadata-visible classes entirely in IR, allowing Metro to move much of its current FIR code gen entirely to IR. This is enabled by default on Kotlin `2.4.20-dev-6138` or newer and can be configured via the `generateClassesInIr` option.
+
+### Fixes
+
+- **[FIR]** Fix supertype merging not accounting for `replaces` coming from binding container contributions.
 
 ### Changes
 
 - Test Kotlin `2.4.20-dev-6138`.
 - Test IntelliJ `2026.2` EAPs.
+
+### Contributors
+
+Special thanks to the following contributors for contributing to this release!
+
+- [@hossain-khan](https://github.com/hossain-khan)
+- [@kevinguitar](https://github.com/kevinguitar)
 
 1.2.0
 -----
