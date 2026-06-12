@@ -430,6 +430,11 @@ tasks.withType<Test> {
 
   systemProperty("metro.shortLocations", "true")
 
+  // Regenerate golden files in place: ./gradlew :compiler-tests:test -PupdateTestData=true
+  if (providers.gradleProperty("updateTestData").isPresent) {
+    systemProperty("kotlin.test.update.test.data", "true")
+  }
+
   systemProperty("metroRuntime.classpath", metroRuntimeClasspath.asPath)
   systemProperty("metroRuntime.klibClasspath", metroRuntimeKlibClasspath.asPath)
   systemProperty("anvilRuntime.classpath", anvilRuntimeClasspath.asPath)
