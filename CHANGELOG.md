@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+1.2.1
+-----
+
+_2026-06-11_
+
 ### New
 
 - **[IR]** Add support for generating metadata-visible classes entirely in IR, allowing Metro to move much of its current FIR code gen entirely to IR.
