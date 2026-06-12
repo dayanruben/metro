@@ -30,6 +30,8 @@ Special thanks to the following contributors for contributing to this release!
 - [@hossain-khan](https://github.com/hossain-khan)
 - [@kevinguitar](https://github.com/kevinguitar)
 
+### [Consider sponsoring Metro's development](https://www.zacsweers.dev/sponsoring-metro/)
+
 1.2.0
 -----
 
