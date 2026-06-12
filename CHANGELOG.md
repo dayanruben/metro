@@ -4,6 +4,22 @@ Changelog
 **Unreleased**
 --------------
 
+### Fixes
+
+- **[IR]** Preserve substituted generic type arguments when generating assisted factory delegate parameters and dynamic graph container inputs.
+- **[IR]** Forward extension and context receivers when generated binding-container factories invoke the original binding function.
+- **[IR]** Fix dispatch receivers for generated graph factory functions and companion/object factory accessors.
+- **[IR]** Patch declaration parents for generated `@Binds` mirror declarations so copied declarations remain attached to the correct generated class.
+- **[IR/JS]** Fix `Map<K, () -> V>` multibindings accessed through provider-style map factories on Kotlin/JS. Generated maps now store callable function values instead of Metro `Provider` objects.
+- **[IR/KLIB]** Fix generated `@Binds` implementations on KLIB backends. Metro now emits concrete identity bodies for inherited `@Binds` members where JS, Native, and Wasm validate abstract members during deserialization.
+- **[IR/KLIB]** Keep generated graph and shard backing fields private while preserving generated access through properties. This avoids backing-field visibility validation failures on KLIB backends.
+
+### Changes
+
+- Run Metro's functional compiler unit tests on JS.
+
+### [Consider sponsoring Metro's development](https://www.zacsweers.dev/sponsoring-metro/)
+
 1.2.1
 -----
 
@@ -74,6 +90,7 @@ _2026-06-10_
 - **[FIR]** Loosen `nonPublicContributionSeverity` if `generateContributionProviders` is enabled. Note it will still fire on internal `@ExposeImplBinding`-annotated types.
 - **[FIR]** Fix compatibility with IntelliJ `2026.1.3`.
 - **[FIR]** Don't merge generated binding containers from `@ContributesInto*` declarations as supertypes when aggregating contributions.
+- **[FIR/JS/Wasm]** Fix cross-module contributed graph extension factories on KLIB backends. Nested `@GraphExtension.Factory @ContributesTo(...)` factories are now emitted as contribution hints and promoted as direct supertypes where needed, avoiding unresolved downstream calls such as `createGraph<AppGraph>().createChildGraph()` on JS/Wasm.
 - **[IR]** Fix graph extensions inheriting a farther ancestor's contribution-provider binding when a closer parent graph already owns a scoped binding for the same key.
 - **[IR]** Fix dynamic graphs (`createDynamicGraph`/`createDynamicGraphFactory`) sharing a single generated impl across call sites in different files. The shared impl was a `private` (on the JVM, package-private) nested class placed under one call site, so call sites in other packages failed at runtime with `IllegalAccessError`, and removing the owning file caused `NoClassDefFoundError`. Generated impls are now cached per-file.
 - **[IR]** Fix IR graph nodes eagerly resolving supertypes.

@@ -1966,11 +1966,13 @@ internal inline fun shouldCheckMirrorParamMismatches(
 ): Boolean {
   return options.enableKlibParamsCheck &&
     // Only on klib platforms by default
-    (platform.isNative() ||
-      platform.isWasm() ||
-      platform.isJs() ||
+    (platform.usesKlib() ||
       // Enabled on JVM IFF the AnnotationsInMetadata flag is enabled
       (platform.isJvm() && annotationsInMetadataEnabled()))
+}
+
+internal fun TargetPlatform?.usesKlib(): Boolean {
+  return this != null && (isNative() || isWasm() || isJs())
 }
 
 context(context: IrMetroContext)
