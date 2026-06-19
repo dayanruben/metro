@@ -888,6 +888,12 @@ public class JsDiagnosticTestGenerated extends AbstractJsDiagnosticTest {
       }
 
       @Test
+      @TestMetadata("AssistedFactoryExtraParamReportsOnParam.kt")
+      public void testAssistedFactoryExtraParamReportsOnParam() {
+        run("AssistedFactoryExtraParamReportsOnParam.kt");
+      }
+
+      @Test
       @TestMetadata("AssistedFactoryMustTargetAssistedInjectTypesButMissingConstructor.kt")
       public void testAssistedFactoryMustTargetAssistedInjectTypesButMissingConstructor() {
         run("AssistedFactoryMustTargetAssistedInjectTypesButMissingConstructor.kt");
@@ -921,6 +927,12 @@ public class JsDiagnosticTestGenerated extends AbstractJsDiagnosticTest {
       @TestMetadata("ContributesAnnotationsNotAllowedOnAssistedInjectClasses.kt")
       public void testContributesAnnotationsNotAllowedOnAssistedInjectClasses() {
         run("ContributesAnnotationsNotAllowedOnAssistedInjectClasses.kt");
+      }
+
+      @Test
+      @TestMetadata("InheritedAssistedFactoryParamMismatchReportsOnFactory.kt")
+      public void testInheritedAssistedFactoryParamMismatchReportsOnFactory() {
+        run("InheritedAssistedFactoryParamMismatchReportsOnFactory.kt");
       }
 
       @Test
