@@ -86,6 +86,7 @@ Changelog
 ### Changes
 
 - Run Metro's functional compiler unit tests on JS.
+- Redundant checksum files are no longer published: checksums of `.asc` signature files ([gradle/gradle#20232](https://github.com/gradle/gradle/issues/20232)) and the `sha256`/`sha512`. If you rely on these, let me know.
 - **[gradle]** Build against Gradle `9.6.0`.
 
 ### Contributors
