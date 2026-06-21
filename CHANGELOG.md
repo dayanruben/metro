@@ -14,48 +14,47 @@ Changelog
   - `help:`/`note:` guidance in messages (replaces the previous `(hint)` sections)
   - Per-diagnostic docs links
   - Diagnostics now wrap to 100 columns and start on their own line after the compiler location prefix
-
-Example plain output
-```
-ExampleGraph.kt:7:11: error: 
-[Metro/DependencyCycle] Found a dependency cycle while processing test.ExampleGraph
-
-  cycle:
-      +-> Double -> String -> Int --+
-      +-----------------------------+
-
-  trace (in test.ExampleGraph):
-      Double is injected at test.ExampleGraph.provideInt(…, double)
-      String is injected at test.ExampleGraph.provideDouble(…, string)
-      Int is injected at test.ExampleGraph.provideString(…, int)
-      Double is injected at test.ExampleGraph.provideInt(…, double)
-      ...
-
-  help: break the cycle by injecting a deferred type at one edge, e.g. `() -> Double` or
-        `Lazy<Double>`
-  docs: https://zacsweers.github.io/metro/latest/diagnostics/#dependencycycle
-```
-
-Example rich output (note that in rich terminals this would have color and markup too!)
-```
-[Metro/MissingBinding] No binding found for String
-
-    ╭─[ /Users/zacsweers/dev/android/personal/FieldSpottr/shared/src/commonMain/kotlin/dev/zacsweers/example/ExampleGraph.kt:9:3 ]
-  9 │   val a: String
-    │   ─────────────
-    ╰─
-
-  trace (in dev.zacsweers.example.ExampleGraph):
-      String is requested at dev.zacsweers.example.ExampleGraph.a
-
-  similar bindings:
-      • CharSequence (Supertype. Type: Provided) — ExampleGraph.kt:12:3
-
-  help: ensure String has an @Inject constructor or is provided by an @Provides or @Binds
-        declaration visible to ExampleGraph
-  docs: https://zacsweers.github.io/metro/latest/diagnostics/#missingbinding
-
-```
+  - **Example plain output**
+    ```
+    ExampleGraph.kt:7:11: error: 
+    [Metro/DependencyCycle] Found a dependency cycle while processing test.ExampleGraph
+    
+      cycle:
+          +-> Double -> String -> Int --+
+          +-----------------------------+
+    
+      trace (in test.ExampleGraph):
+          Double is injected at test.ExampleGraph.provideInt(…, double)
+          String is injected at test.ExampleGraph.provideDouble(…, string)
+          Int is injected at test.ExampleGraph.provideString(…, int)
+          Double is injected at test.ExampleGraph.provideInt(…, double)
+          ...
+    
+      help: break the cycle by injecting a deferred type at one edge, e.g. `() -> Double` or
+            `Lazy<Double>`
+      docs: https://zacsweers.github.io/metro/latest/diagnostics/#dependencycycle
+    ```
+  - **Example rich output**
+    
+    _(note that in rich terminals this would have color and markup too!)_
+    ```
+    [Metro/MissingBinding] No binding found for String
+    
+        ╭─[ /.../src/commonMain/kotlin/dev/zacsweers/example/ExampleGraph.kt:9:3 ]
+      9 │   val a: String
+        │   ─────────────
+        ╰─
+    
+      trace (in dev.zacsweers.example.ExampleGraph):
+          String is requested at dev.zacsweers.example.ExampleGraph.a
+    
+      similar bindings:
+          • CharSequence (Supertype. Type: Provided) — ExampleGraph.kt:12:3
+    
+      help: ensure String has an @Inject constructor or is provided by an @Provides or @Binds
+            declaration visible to ExampleGraph
+      docs: https://zacsweers.github.io/metro/latest/diagnostics/#missingbinding
+    ```
 
 - **[gradle]** Add a `diagnosticsRenderMode` Gradle option (`AUTO`/`PLAIN`/`RICH`) for diagnostic rendering.
   - `AUTO` defaults to rich output and falls back to plain output for non-empty `NO_COLOR`, `--console=plain`, and IDE-invoked builds.
