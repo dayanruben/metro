@@ -3,7 +3,7 @@
 package dev.zacsweers.metro.compiler.ir
 
 import dev.drewhamilton.poko.Poko
-import dev.zacsweers.metro.compiler.appendLineWithUnderlinedContent
+import dev.zacsweers.metro.compiler.appendLineWithUnderlinedRanges
 import dev.zacsweers.metro.compiler.graph.LocationDiagnostic
 import dev.zacsweers.metro.compiler.ir.parameters.Parameters
 import dev.zacsweers.metro.compiler.symbols.Symbols
@@ -86,14 +86,20 @@ internal class BindsCallable(
 
     val description = buildString {
       if (isContributed) {
-        append((sourceDeclaration as IrDeclarationParent).kotlinFqName)
-        append(" contributes a binding of ")
-        appendLineWithUnderlinedContent(
+        val sourceName = (sourceDeclaration as IrDeclarationParent).kotlinFqName.asString()
+        val renderedType =
           typeKey.renderForDiagnostic(
             short = short,
             includeQualifier = true,
             useOriginalQualifier = true,
           )
+        val content = "$sourceName contributes a binding of $renderedType"
+        appendLineWithUnderlinedRanges(
+          content,
+          listOf(
+            0 until sourceName.length,
+            content.length - renderedType.length until content.length,
+          ),
         )
       } else {
         renderForDiagnostic(
@@ -107,7 +113,13 @@ internal class BindsCallable(
         )
       }
     }
-    return LocationDiagnostic(location, description)
+    val span =
+      if (isContributed) {
+        sourceDeclaration.toNameDiagnosticSpan(shortDisplayPath = shortLocation)
+      } else {
+        null
+      }
+    return LocationDiagnostic(location, description, span)
   }
 }
 

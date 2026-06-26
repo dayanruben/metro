@@ -5,6 +5,7 @@ package dev.zacsweers.metro.compiler.ir.graph
 import dev.drewhamilton.poko.Poko
 import dev.zacsweers.metro.compiler.MetroAnnotations
 import dev.zacsweers.metro.compiler.appendLineWithUnderlinedContent
+import dev.zacsweers.metro.compiler.appendLineWithUnderlinedRanges
 import dev.zacsweers.metro.compiler.capitalizeUS
 import dev.zacsweers.metro.compiler.expectAs
 import dev.zacsweers.metro.compiler.graph.BaseBinding
@@ -35,6 +36,8 @@ import dev.zacsweers.metro.compiler.ir.renderForDiagnostic
 import dev.zacsweers.metro.compiler.ir.renderSourceLocation
 import dev.zacsweers.metro.compiler.ir.requireSimpleType
 import dev.zacsweers.metro.compiler.ir.toDiagnosticSpan
+import dev.zacsweers.metro.compiler.ir.toNameDiagnosticSpan
+import dev.zacsweers.metro.compiler.ir.toTypeDiagnosticSpan
 import dev.zacsweers.metro.compiler.memoize
 import dev.zacsweers.metro.compiler.reportCompilerBug
 import dev.zacsweers.metro.compiler.symbols.Symbols
@@ -103,7 +106,13 @@ internal sealed interface IrBinding : BaseBinding<IrType, IrTypeKey, IrContextua
     return LocationDiagnostic(
       locationString,
       renderDescriptionDiagnostic(short = short, underlineTypeKey = underlineTypeKey),
-      reportableDeclaration?.toDiagnosticSpan(shortDisplayPath = shortLocation),
+      reportableDeclaration?.let { declaration ->
+        if (underlineTypeKey) {
+          declaration.toTypeDiagnosticSpan(shortDisplayPath = shortLocation)
+        } else {
+          declaration.toDiagnosticSpan(shortDisplayPath = shortLocation)
+        }
+      },
     )
   }
 
@@ -307,19 +316,16 @@ internal sealed interface IrBinding : BaseBinding<IrType, IrTypeKey, IrContextua
 
     override fun renderDescriptionDiagnostic(short: Boolean, underlineTypeKey: Boolean) =
       buildString {
-        val originName =
-          originClass?.kotlinFqName?.asString() ?: originClassId?.asSingleFqName()?.asString()
+        val originName = renderOriginName()
         if (originName != null) {
           // For contribution provider bindings, show the origin class instead of the
           // generated provides function
-          append(originName)
-          append(" contributes a binding of ")
+          val renderedType = providerFactory.typeKey.renderForDiagnostic(short = short)
+          val content = "$originName contributes a binding of $renderedType"
           if (underlineTypeKey) {
-            appendLineWithUnderlinedContent(
-              providerFactory.typeKey.renderForDiagnostic(short = short)
-            )
+            appendContributionSummaryWithUnderlines(content, originName, renderedType)
           } else {
-            append(providerFactory.typeKey.renderForDiagnostic(short = short))
+            append(content)
           }
         } else {
           renderForDiagnostic(
@@ -333,6 +339,52 @@ internal sealed interface IrBinding : BaseBinding<IrType, IrTypeKey, IrContextua
           )
         }
       }
+
+    fun renderContributionLocationDiagnostic(
+      short: Boolean,
+      shortLocation: Boolean,
+    ): LocationDiagnostic? {
+      val originName = renderOriginName() ?: return null
+      val location =
+        originClass?.renderSourceLocation(short = shortLocation)
+          ?: originClassId?.asSingleFqName()?.asString()
+          ?: return null
+      val renderedType = providerFactory.typeKey.renderForDiagnostic(short = short)
+      val content = "$originName contributes a binding of $renderedType"
+      val description = buildString {
+        appendContributionSummaryWithUnderlines(content, originName, renderedType)
+      }
+      return LocationDiagnostic(
+        location,
+        description,
+        originClass?.toNameDiagnosticSpan(shortDisplayPath = shortLocation),
+      )
+    }
+
+    private fun renderOriginName(): String? {
+      originClass?.let { originClass ->
+        return originClass.kotlinFqName.asString()
+      }
+      originClassId?.let { originClassId ->
+        return originClassId.asSingleFqName().asString()
+      }
+      return null
+    }
+
+    context(builder: StringBuilder)
+    private fun appendContributionSummaryWithUnderlines(
+      content: String,
+      originName: String,
+      renderedType: String,
+    ) {
+      builder.appendLineWithUnderlinedRanges(
+        content,
+        listOf(
+          0 until originName.length,
+          content.length - renderedType.length until content.length,
+        ),
+      )
+    }
 
     override fun toString() = renderDescriptionDiagnostic(short = true, underlineTypeKey = false)
   }
