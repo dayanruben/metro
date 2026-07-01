@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+1.3.0
+-----
+
+_2026-07-01_
+
 ### New
 
 - **[IR]** Revamp graph-validation diagnostics with structured output. Taking some inspiration from Rust error messages.
