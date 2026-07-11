@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+1.3.1
+-----
+
+_2026-07-11_
+
 ### Fixes
 
 - **[FIR]** Report a diagnostic error when `@DependencyGraph.Factory` is used for a graph extension, instead of crashing.
