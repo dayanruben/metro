@@ -15,6 +15,7 @@ Changelog
 ### Changes
 
 - Fold `2.4.20-dev-3583` compat into `2.4.20-dev-6138` as IntelliJ 2026.2 RCs now depend on a newer version.
+- Test Kotlin `2.4.10-RC2`.
 
 ### Contributors
 
