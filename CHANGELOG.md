@@ -8,6 +8,7 @@ Changelog
 
 - **[FIR]** Report a diagnostic error when `@DependencyGraph.Factory` is used for a graph extension, instead of crashing.
 - **[IR]** Fix `createGraphFactory()` calls for graph factory interfaces compiled in upstream modules with IR-only class generation.
+- **[IR/interop]** Fix graph dependency accessors that return supported `Lazy<T>` or `Provider<T>` wrapper types.
 - **[IR/interop]** Fix a crash when member-injecting an unscoped constructor-injected binding as `dagger.Lazy<T>`.
 
 ### Changes
@@ -19,6 +20,7 @@ Changelog
 Special thanks to the following contributors for contributing to this release!
 
 - [@bnorm](https://github.com/bnorm)
+- [@kevinguitar](https://github.com/kevinguitar)
 
 ### [Consider sponsoring Metro's development](https://www.zacsweers.dev/sponsoring-metro/)
 
