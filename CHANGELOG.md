@@ -18,6 +18,7 @@ Changelog
 ### Changes
 
 - Support Kotlin `2.5.0-dev-498`.
+- Update embedded Wire dependency to `6.4.5`.
 
 ### Contributors
 
