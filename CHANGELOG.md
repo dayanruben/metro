@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+1.3.2
+-----
+
+_2026-07-13_
+
 ### Enhancements
 
 - **[IR]** Improve CLI diagnostic formatting by keeping messages on the compiler severity line.
