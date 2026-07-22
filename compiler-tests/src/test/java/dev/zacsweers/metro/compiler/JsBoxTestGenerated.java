@@ -679,6 +679,12 @@ public class JsBoxTestGenerated extends AbstractJsBoxTest {
     }
 
     @Test
+    @TestMetadata("DuplicatedDepInBinding.kt")
+    public void testDuplicatedDepInBinding() {
+      run("DuplicatedDepInBinding.kt");
+    }
+
+    @Test
     @TestMetadata("ParentIncludesArePropgatedToExtensions.kt")
     public void testParentIncludesArePropgatedToExtensions() {
       run("ParentIncludesArePropgatedToExtensions.kt");
