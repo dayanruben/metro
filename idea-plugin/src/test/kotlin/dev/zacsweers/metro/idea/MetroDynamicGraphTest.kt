@@ -68,6 +68,8 @@ class MetroDynamicGraphTest : BasePlatformTestCase() {
   }
 
   fun testEquivalentCallsShareAContextWithinAFileButNotAcrossFiles() {
+    // Install the resolution listener before creating files so every caller is enrolled.
+    val service = project.service<MetroResolutionService>()
     val declarations =
       myFixture.addFileToProject(
         "test/Graph.kt",
@@ -107,7 +109,7 @@ class MetroDynamicGraphTest : BasePlatformTestCase() {
           .trimIndent(),
       ) as KtFile
 
-    val index = project.service<MetroResolutionService>().index(declarations)
+    val index = service.index(declarations)
     val graph = index.graphs.single { it.name == "AppGraph" }
     val dynamicContexts = index.contextsFor(graph).filter { it.dynamicGraph != null }
 
