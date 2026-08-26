@@ -12,6 +12,14 @@ Adding a new test is easy! The simple flow is just
 2. Run `./gradlew :compiler-tests:generateTests` to regenerate tests. This is important, as these files are not automatically picked up otherwise.
 3. After running you'll see a new unit test method generated in the relevant class in `src/test/java`, which you can now use to run your test!
 
+Generation and a focused test run can also share one invocation from the repository root:
+
+```bash
+./gradlew :compiler-tests:generateTests :compiler-tests:test --tests '*MyTest*' --quiet
+```
+
+Replace `*MyTest*` with the generated class or method filter for your fixture. The generator uses the Kotlin test support without compiling the generated Java suites first. Java compilation runs after generation when both tasks are requested, so newly added tests are available in that same invocation. Ordinary `:compiler-tests:test` runs continue to use the checked-in suites without regenerating them.
+
 If you want to test something our first, you can also run the existing `ir/scratch.kt` or `fir/scratch.kt` tests as a sort of playground. The files are black and you can add whatever code you want to it, run it, and see the dumped output (IR or FIR, respectively) to see what the compiler generates for them. This is super helpful for debugging too.
 
 ## Directives
@@ -88,6 +96,16 @@ To run large tests locally:
 ```bash
 ./gradlew :compiler-tests:test -Pmetro.enableLargeTests
 ```
+
+#### More heap for focused tests
+
+Compose-heavy JS tests can need more than the default 2g heap even when they are not stress tests. Set `metro.compilerTestHeapSize` to increase heap without changing which tests run:
+
+```bash
+./gradlew :compiler-tests:test -Pmetro.compilerTestHeapSize=5g --tests '*JsBoxTestGenerated*MyTest*' --quiet
+```
+
+Replace `MyTest` with the generated class or method for your fixture. The override also works with `generateTests` in the same invocation. It changes only the test JVM's maximum heap. Without it, ordinary runs keep 2g and `metro.enableLargeTests` runs keep 5g. Stress tests remain excluded unless `metro.enableLargeTests` is set.
 
 ### Reports
 
