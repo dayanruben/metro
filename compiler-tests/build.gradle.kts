@@ -8,6 +8,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinUsages
 import org.jetbrains.kotlin.gradle.targets.js.KotlinJsCompilerAttribute
 import org.jetbrains.kotlin.gradle.targets.wasm.d8.D8EnvSpec
 import org.jetbrains.kotlin.gradle.targets.wasm.d8.D8Plugin
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
 import org.jetbrains.kotlin.tooling.core.isDev
 import org.jetbrains.kotlin.tooling.core.toKotlinVersion
@@ -328,7 +329,16 @@ val generateTests =
 
     outputs.dir(layout.projectDirectory.dir("src/test/java")).withPropertyName("generatedTests")
 
-    classpath = sourceSets.test.get().runtimeClasspath
+    // The generator needs Kotlin test support, but not the Java suites it generates. Using the
+    // whole test output would compile those suites before generation and leave new tests
+    // uncompiled.
+    classpath =
+      files(
+        tasks.named<KotlinJvmCompile>("compileTestKotlin").flatMap { it.destinationDirectory },
+        tasks.named("processTestResources"),
+        sourceSets.main.map { it.output },
+        configurations.testRuntimeClasspath,
+      )
     mainClass.set("dev.zacsweers.metro.compiler.GenerateTestsKt")
     workingDir = rootDir
 
@@ -340,7 +350,16 @@ val generateTests =
     jvmArgs("-Xss1m")
   }
 
+// Preserve explicit generation: ordinary test runs use the checked-in suites. When generation is
+// requested in the same invocation, compile the updated Java sources before running tests.
+tasks.named<JavaCompile>("compileTestJava") { mustRunAfter(generateTests) }
+
 val largeTestMode = providers.gradleProperty("metro.enableLargeTests").isPresent
+
+// Heap tuning must not change test selection. Large-test mode still selects only stress tests.
+val compilerTestHeapSize =
+  providers.gradleProperty("metro.compilerTestHeapSize").orElse(if (largeTestMode) "5g" else "2g")
+
 val excludeJsBoxTests = providers.gradleProperty("metro.excludeJsBoxTests").isPresent
 val testOmitRedundantMirrors = providers.gradleProperty("metro.testOmitRedundantMirrors").orNull
 
@@ -360,7 +379,7 @@ tasks.withType<Test> {
 
   // Inspo from https://youtrack.jetbrains.com/issue/KT-83440
   minHeapSize = "512m"
-  maxHeapSize = if (largeTestMode) "5g" else "2g"
+  maxHeapSize = compilerTestHeapSize.get()
   jvmArgs(
     "-ea",
     "-XX:+UseCodeCacheFlushing",
