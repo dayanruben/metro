@@ -6,17 +6,31 @@ See @README.md, @docs, and @.github/CONTRIBUTING.md for project overview.
 
 ### Building and Testing
 
+When running tests, run focused/neighborhood tests primarily while iterating. The test suite is large and expensive to run now.
+
 - `./gradlew :compiler:test` - Run legacy compiler tests
 - `./gradlew :compiler-tests:test` - Run new compiler tests
+- `./gradlew :compiler-tests:generateTests :compiler-tests:test --tests '*MyTest*'` - Generate and run a focused compiler test in one invocation
+- `./gradlew :compiler-tests:test -Pmetro.compilerTestHeapSize=5g --tests '*JsBoxTestGenerated*MyTest*'` - Run a focused JS box test with more heap, without selecting stress tests
 - `./gradlew :gradle-plugin:functionalTest` - Run Gradle integration tests
 - `./gradlew -p samples check` - Run sample project tests
 - `./metrow check` - Runs _all_ validation and tests in the project (tests, linting, API validation). This is expensive.
 
 Generally you should run with `--quiet` to reduce noise. Failures would be reported to the console as needed.
 
+### IDEA Plugin
+
+`idea-plugin/` is a separate Gradle build, not a root subproject. Run commands from the repository root with `./gradlew -p idea-plugin`:
+
+- `./gradlew -p idea-plugin compileKotlin` - Compile the plugin
+- `./gradlew -p idea-plugin compileTestKotlin` - Compile its tests without running them
+- `./gradlew -p idea-plugin test --tests '*MyTest*'` - Run a focused plugin test
+
+Do not use `:idea-plugin:...` task paths in the root build.
+
 ### Code Quality
 
-- Don't bother running code formatting or cleaning up imports, I'll handle that in commits.
+- Don't bother running code formatting or cleaning up imports, the formatter runs in commit hooks and will handle it.
 - Reuse existing infrastructure. When the codebase already has a pattern, utility, or abstraction for something, USE IT. Do not duplicate code, copy patterns into new locations, or reimplement what already exists. If you're unsure whether infra exists, grep first.
 
 ### Documentation
@@ -64,7 +78,9 @@ Metro is a compile-time dependency injection framework implemented as a Kotlin c
 - Diagnostic tests (`data/diagnostic/`) - Error reporting and validation
 - Dump tests (`data/dump/`) - FIR/IR tree inspection and verification
 
-To create a new test, add a source file under the appropriate directory and then run `./gradlew :compiler-tests:generateTests` to regenerate tests. This will then add a generated junit test that can be run via the standard `./gradlew :compiler-tests:test` task.
+To create a new test, add a source file under the appropriate directory and run `./gradlew :compiler-tests:generateTests` to regenerate the checked-in JUnit suites. Generation and testing can run separately or together with `./gradlew :compiler-tests:generateTests :compiler-tests:test --tests '*MyTest*'`. When both are requested, Gradle compiles the generated Java suites after generation. Ordinary test runs do not regenerate them automatically.
+
+For Compose-heavy JS tests that exhaust the default 2g heap, use `-Pmetro.compilerTestHeapSize=5g` with a focused `--tests` filter. Do not use `-Pmetro.enableLargeTests` for this: that property selects only `*StressTest*` tests. See `compiler-tests/README.md` for both workflows.
 
 **samples/** - Real-world integration examples
 - `weather-app/` - Basic multiplatform usage
@@ -100,10 +116,8 @@ To create a new test, add a source file under the appropriate directory and then
 ## Testing New Features
 
 1. Add compiler tests in `compiler-tests/src/test/data/` using the appropriate test type
-2. Test existing tests with `./gradlew :compiler:test`.
+2. Generate the suites and run a focused selection with `./gradlew :compiler-tests:generateTests :compiler-tests:test --tests '*MyTest*'`.
 3. Test integration with samples in `samples/` directory
-
-Never run tests yourself without asking me first. You are not usually able to debug them yourself.
 
 ## Important Notes
 
@@ -113,7 +127,7 @@ Never run tests yourself without asking me first. You are not usually able to de
 - Always run API validation (`apiCheck`) when changing public APIs
 - Use existing test infrastructure patterns rather than creating new test types
 - Don't run Gradle commands with unnecessary flags like `--info`, `--no-daemon`, etc.
-- Don't cd into a module directory and run Gradle commands - use `./gradlew` instead from the directory that wrapper is in.
+- Don't cd into a module directory and run Gradle commands - use `./gradlew` instead from the directory that wrapper is in. For separate builds such as `idea-plugin/`, use the root wrapper with `-p idea-plugin`.
 
 ## Working Style
 

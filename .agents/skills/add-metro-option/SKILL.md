@@ -7,9 +7,9 @@ description: Adds a new compiler option to Metro.
 
 When adding a new option, you need to update these files in order:
 
-### 1. `compiler/src/main/kotlin/dev/zacsweers/metro/compiler/MetroOptions.kt`
+### 1. `metro-common/src/main/kotlin/dev/zacsweers/metro/compiler/MetroOptions.kt`
 
-Add the option in four places:
+Add the option in five places. These shared definitions serve both the compiler and the IDE plugin:
 
 #### a. Add enum entry in `MetroOption`
 
@@ -41,7 +41,7 @@ MY_INT_OPTION(
 ),
 ```
 
-#### b. Add property in `MetroOptions` data class
+#### b. Add property in the `MetroOptions` constructor
 
 ```kotlin
 public val myNewOption: Boolean = MetroOption.MY_NEW_OPTION.raw.defaultValue.expectAs(),
@@ -59,16 +59,15 @@ public var myNewOption: Boolean = base.myNewOption
 myNewOption = myNewOption,
 ```
 
-#### e. Add to `MetroOptions.Companion.load()` function
+#### e. Add to `MetroOptions.Builder.applyOptionValue()`
 
 ```kotlin
-MY_NEW_OPTION -> myNewOption = configuration.getAsBoolean(entry)
+MetroOption.MY_NEW_OPTION -> myNewOption = value.expectAs()
 ```
 
-For non-boolean types, use the appropriate helper:
-- `configuration.getAsString(entry)` for String
-- `configuration.getAsInt(entry)` for Int
-- `configuration.getAsSet(entry)` for Set types
+`value` has already been converted by `RawMetroOption.valueMapper`. Use `value.expectAs<T>()` for its mapped type and apply any additional conversion needed by the builder property.
+
+Compiler loading in `compiler/src/main/kotlin/dev/zacsweers/metro/compiler/MetroCompilerOptions.kt` and IDE loading through `MetroOptions.Builder.applyRawOptions()` both delegate to this shared mapping. Do not add a second per-option loading switch to either caller.
 
 ### 2. `gradle-plugin/src/main/kotlin/dev/zacsweers/metro/gradle/MetroPluginExtension.kt`
 
@@ -128,12 +127,14 @@ Or for simple on/off directives:
 val MY_NEW_OPTION by directive("Description of the directive.")
 ```
 
+Wire the directive into `MetroOptions.buildOptions` in `compiler-tests/src/test/kotlin/dev/zacsweers/metro/compiler/MetroExtensionRegistrarConfigurator.kt` so it affects the test configuration. Preserve the option's default when the directive is absent.
+
 ## Option Types
 
 - **Boolean**: Use `RawMetroOption.boolean()` helper
 - **Int**: Use `RawMetroOption()` with `valueMapper = { it.toInt() }`
 - **String**: Use `RawMetroOption()` with `valueMapper = { it }`
-- **Enum**: Use `RawMetroOption()` with `valueMapper = { it }` and parse in load()
+- **Enum**: Use `RawMetroOption()` with `valueMapper = { it }` and parse in `Builder.applyOptionValue()`
 - **Set<ClassId>**: Use `RawMetroOption()` with `valueMapper = { it.splitToSequence(':').mapToSet { ClassId.fromString(it, false) } }`
 
 ## Naming Conventions

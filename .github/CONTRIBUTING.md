@@ -30,6 +30,20 @@ There are a few primary subprojects to consider.
 
 To include the `samples` project in IntelliJ, open the Gradle tab and just add it as another project. It depends on the regular artifacts as included build dependencies.
 
+### IDEA Plugin Development
+
+`idea-plugin/` is a separate Gradle build, not a subproject of the root build. Add it as another Gradle project in IntelliJ when working on the plugin. From the repository root, use the root wrapper with `-p idea-plugin`:
+
+```bash
+./gradlew -p idea-plugin compileKotlin --quiet
+./gradlew -p idea-plugin compileTestKotlin --quiet
+./gradlew -p idea-plugin test --tests '*MyTest*' --quiet
+```
+
+`compileTestKotlin` compiles test sources without running tests. Replace `*MyTest*` with the test you want to run. Root task paths such as `:idea-plugin:compileKotlin` will not work because the plugin has its own settings file.
+
+### Development Tools
+
 Code formatting is handled by [kempt](https://github.com/ZacSweers/kempt), which wraps ktfmt + google-java-format and is configured via `.kempt.toml`. Install with `brew install ZacSweers/tap/kempt-fmt` or `cargo install kempt-fmt`.
 
 Git hooks for code formatting are automatically configured on the first Gradle invocation via `config/git/.gitconfig`. The pre-commit hook delegates to `kempt hook`. The formatter versions are pinned in `.kempt.toml` and bumped automatically by Renovate; bump them manually with `kempt upgrade`.
