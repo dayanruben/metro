@@ -258,8 +258,20 @@ class MetroToolWindowTreeTest : BasePlatformTestCase() {
       structure.children(root).map { (it as MetroTreeNode.Graph).context.path },
     )
 
-    currentIndex = BindingIndex(emptyList(), emptyList(), emptyList(), emptyList())
+    currentIndex = BindingIndex.EMPTY
     assertTrue(structure.children(root).isEmpty())
+    assertEquals(context.path, pinService.pinnedPath)
+
+    // Clear the pin only after a completed index confirms that its graph disappeared.
+    val document = checkNotNull(PsiDocumentManager.getInstance(project).getDocument(file))
+    val graphNameStart = document.text.indexOf("interface AppGraph") + "interface ".length
+    WriteCommandAction.runWriteCommandAction(project) {
+      document.replaceString(graphNameStart, graphNameStart + "AppGraph".length, "ReplacementGraph")
+    }
+    PsiDocumentManager.getInstance(project).commitAllDocuments()
+    currentIndex = project.service<MetroResolutionService>().index(file)
+
+    assertEquals(listOf("ReplacementGraph"), structure.children(root).map { it.text })
     assertNull(pinService.pinnedPath)
   }
 
