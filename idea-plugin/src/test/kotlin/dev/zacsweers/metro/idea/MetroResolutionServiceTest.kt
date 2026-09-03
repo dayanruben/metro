@@ -20,12 +20,15 @@ import dev.zacsweers.metro.idea.index.ConsumerOwnershipBundle
 import dev.zacsweers.metro.idea.index.IndexBuildPhase
 import dev.zacsweers.metro.idea.index.IndexBuildProgress
 import dev.zacsweers.metro.idea.index.IndexBuildProgressReporter
+import dev.zacsweers.metro.idea.index.IndexRequestMode
+import dev.zacsweers.metro.idea.index.IndexRequestPolicy
 import dev.zacsweers.metro.idea.index.MetroResolutionService
 import dev.zacsweers.metro.idea.index.retryCancelledIndexBuild
 import dev.zacsweers.metro.idea.index.sourceAssistedFactoryUseSites
 import dev.zacsweers.metro.idea.model.BindingIndex
 import dev.zacsweers.metro.idea.model.ConsumerResolution
 import dev.zacsweers.metro.idea.model.KaBinding
+import dev.zacsweers.metro.idea.model.KaGraphDeclaration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -94,8 +97,8 @@ class MetroResolutionServiceTest : BasePlatformTestCase() {
 
       val added = presentationFile("PresentationAdded")
       assertTrue(ApplicationManager.getApplication().isDispatchThread)
-      assertSame(initial, service.index(files.first()))
-      assertSame(initial, service.index(added))
+      assertSame(BindingIndex.EMPTY, service.currentIndex(files.first()))
+      assertSame(BindingIndex.EMPTY, service.currentIndex(added))
       assertNull(service.presentationBundle(added.declarations.single()))
 
       release.countDown()
@@ -107,6 +110,179 @@ class MetroResolutionServiceTest : BasePlatformTestCase() {
         val declaration = file.declarations.single()
         repeat(3) { assertSame(bundle, service.presentationBundle(declaration)) }
       }
+    } finally {
+      release.countDown()
+      Disposer.dispose(service)
+      serviceScope.cancel()
+      serviceScope.coroutineContext.job.awaitTestCompletion()
+      dispatcher.close()
+    }
+  }
+
+  fun testCachedPresentationMissNotifiesAfterNoOpClassificationAndExplicitUpgrade() {
+    val file = configure()
+    val executor = Executors.newSingleThreadExecutor()
+    val dispatcher = executor.asCoroutineDispatcher()
+    val serviceScope = CoroutineScope(SupervisorJob() + dispatcher)
+    val service = MetroResolutionService(project, serviceScope)
+    val paused = CompletableFuture<Unit>()
+    val release = CountDownLatch(1)
+
+    try {
+      val initial = service.awaitIndex(file)
+      service.activateGraphBrowser()
+      UIUtil.dispatchAllInvocationEvents()
+      val notified = CompletableFuture<Unit>()
+      var notifications = 0
+      service.addIndexListener(testRootDisposable) {
+        notifications++
+        notified.complete(Unit)
+      }
+      executor.submit {
+        paused.complete(Unit)
+        release.await()
+      }
+      PlatformTestUtil.waitForFuture(paused, 30_000)
+
+      // Reapplying unchanged settings makes readers wait for classification without a rebuild.
+      service.settingsChanged()
+      repeat(5) {
+        assertSame(BindingIndex.EMPTY, service.indexForToolWindow(module))
+        assertSame(BindingIndex.EMPTY, service.presentationIndex(file))
+      }
+      // The production EDT policy merges an explicit request with the presentation misses.
+      assertSame(BindingIndex.EMPTY, service.currentIndex(file))
+
+      release.countDown()
+      PlatformTestUtil.waitForFuture(notified, 30_000)
+      assertSame(initial, service.awaitIndex(file))
+      repeat(5) { assertSame(initial, service.indexForToolWindow(module)) }
+      runBlocking { withTimeout(30_000) { service.awaitCoordinatorBarrier() } }
+      UIUtil.dispatchAllInvocationEvents()
+      assertEquals(1, notifications)
+    } finally {
+      release.countDown()
+      Disposer.dispose(service)
+      serviceScope.cancel()
+      serviceScope.coroutineContext.job.awaitTestCompletion()
+      dispatcher.close()
+    }
+  }
+
+  fun testCachedPresentationMissNotifiesAfterModuleStateWarmup() {
+    val file = configure()
+    val projectStateService = project.service<MetroIdeProjectService>()
+    val executor = Executors.newSingleThreadExecutor()
+    val dispatcher = executor.asCoroutineDispatcher()
+    val serviceScope = CoroutineScope(SupervisorJob() + dispatcher)
+    val service = MetroResolutionService(project, serviceScope)
+    val paused = CompletableFuture<Unit>()
+    val releaseCoordinator = CountDownLatch(1)
+    val warmupStarted = CompletableFuture<Unit>()
+    val releaseWarmup = CountDownLatch(1)
+
+    try {
+      val initial = service.awaitIndex(file)
+      service.activateGraphBrowser()
+      UIUtil.dispatchAllInvocationEvents()
+      val notified = CompletableFuture<Unit>()
+      var notifications = 0
+      service.addIndexListener(testRootDisposable) {
+        notifications++
+        notified.complete(Unit)
+      }
+      executor.submit {
+        paused.complete(Unit)
+        releaseCoordinator.await()
+      }
+      PlatformTestUtil.waitForFuture(paused, 30_000)
+      projectStateService.clearCurrentState(module)
+      projectStateService.setStateWarmupObserver {
+        warmupStarted.complete(Unit)
+        releaseWarmup.await()
+      }
+
+      service.settingsChanged()
+      assertSame(BindingIndex.EMPTY, service.indexForToolWindow(module))
+      PlatformTestUtil.waitForFuture(warmupStarted, 30_000)
+
+      // Classification restores the cached generation before the warmup callback can retry.
+      releaseCoordinator.countDown()
+      val classified = CompletableFuture.supplyAsync {
+        runBlocking { withTimeout(30_000) { service.awaitCoordinatorBarrier() } }
+      }
+      PlatformTestUtil.waitForFuture(classified, 30_000)
+      assertTrue(service.isCurrent(initial))
+      UIUtil.dispatchAllInvocationEvents()
+      assertEquals(0, notifications)
+      assertFalse(notified.isDone)
+      releaseWarmup.countDown()
+
+      PlatformTestUtil.waitForFuture(notified, 30_000)
+      assertSame(initial, service.indexForToolWindow(module))
+      runBlocking { withTimeout(30_000) { service.awaitCoordinatorBarrier() } }
+      UIUtil.dispatchAllInvocationEvents()
+      assertEquals(1, notifications)
+    } finally {
+      releaseCoordinator.countDown()
+      releaseWarmup.countDown()
+      projectStateService.setStateWarmupObserver(null)
+      Disposer.dispose(service)
+      serviceScope.cancel()
+      serviceScope.coroutineContext.job.awaitTestCompletion()
+      dispatcher.close()
+    }
+  }
+
+  fun testInjectedRequestPolicyCanScheduleCurrentQueriesWithoutWaiting() {
+    val file = configure()
+    val executor = Executors.newSingleThreadExecutor()
+    val dispatcher = executor.asCoroutineDispatcher()
+    val serviceScope = CoroutineScope(SupervisorJob() + dispatcher)
+    val selectedBackgroundCurrentMode = AtomicBoolean()
+    val selectedPresentationMode = AtomicBoolean()
+    val policy =
+      object : IndexRequestPolicy {
+        override fun currentRequestMode(isDispatchThread: Boolean): IndexRequestMode {
+          selectedBackgroundCurrentMode.set(!isDispatchThread)
+          return IndexRequestMode.BACKGROUND
+        }
+
+        override fun automaticPresentationRequestMode(): IndexRequestMode {
+          selectedPresentationMode.set(true)
+          return IndexRequestMode.AUTOMATIC_BACKGROUND
+        }
+      }
+    val service = MetroResolutionService.createForTest(project, serviceScope, policy)
+    val paused = CompletableFuture<Unit>()
+    val release = CountDownLatch(1)
+    val notified = CompletableFuture<Unit>()
+    service.addIndexListener(testRootDisposable) { notified.complete(Unit) }
+
+    try {
+      executor.submit {
+        paused.complete(Unit)
+        check(release.await(30, TimeUnit.SECONDS))
+      }
+      PlatformTestUtil.waitForFuture(paused, 30_000)
+      // A production background query would wait for the paused coordinator. The injected policy
+      // returns its cache miss after queueing the same build, with no test-mode branch involved.
+      val queried = CompletableFuture.supplyAsync {
+        runBlocking {
+          smartReadAction(project) {
+            project.service<MetroIdeProjectService>().state(module)
+            service.currentIndex(file)
+          }
+        }
+      }
+      assertSame(BindingIndex.EMPTY, PlatformTestUtil.waitForFuture(queried, 30_000))
+      assertTrue(selectedBackgroundCurrentMode.get())
+      assertSame(BindingIndex.EMPTY, service.presentationIndex(file))
+      assertTrue(selectedPresentationMode.get())
+
+      release.countDown()
+      PlatformTestUtil.waitForFuture(notified, 30_000)
+      assertFalse(service.awaitIndex(file).bindings.isEmpty())
     } finally {
       release.countDown()
       Disposer.dispose(service)
@@ -603,6 +779,56 @@ class MetroResolutionServiceTest : BasePlatformTestCase() {
       assertTrue(refreshed.bindings.any { it.typeKey.renderedType == "test.AddedAfterRefresh" })
       assertFalse(service.isManualGraphDataRefreshRequired)
       assertEquals(1, refreshNotifications)
+    } finally {
+      settings.automaticallyRefreshGraphData = true
+      service.settingsChanged()
+    }
+  }
+
+  fun testExplicitGraphLookupWaitsForNewGraphInManualRefreshMode() {
+    val file = configure()
+    val service = project.service<MetroResolutionService>()
+    val initial = service.awaitIndex(file)
+    val settings = MetroSettings.getInstance(project).state
+    settings.automaticallyRefreshGraphData = false
+    service.settingsChanged()
+    service.activateGraphBrowser()
+    runBlocking { withTimeout(30_000) { service.awaitCoordinatorBarrier() } }
+    UIUtil.dispatchAllInvocationEvents()
+
+    try {
+      val staleNotification = CompletableFuture<Unit>()
+      var notifications = 0
+      service.addIndexListener(testRootDisposable) {
+        notifications++
+        staleNotification.complete(Unit)
+      }
+      val added =
+        myFixture.addFileToProject(
+          "test/AddedGraph.kt",
+          "package test\n\n@dev.zacsweers.metro.DependencyGraph interface AddedGraph",
+        ) as KtFile
+      runBlocking { withTimeout(30_000) { service.awaitCoordinatorBarrier() } }
+      PlatformTestUtil.waitForFuture(staleNotification, 30_000)
+      assertTrue(service.isManualGraphDataRefreshRequired)
+      assertSame(initial, service.indexForToolWindow(module))
+
+      // A first validation action must finish even after the browser consumed its stale notice.
+      val found = CompletableFuture<KaGraphDeclaration?>()
+      val lookup =
+        service.findGraphAsync(ClassId.topLevel(FqName("test.AddedGraph")), added.virtualFile) {
+          assertTrue(ApplicationManager.getApplication().isDispatchThread)
+          found.complete(it)
+        }
+      val graph = PlatformTestUtil.waitForFuture(found, 30_000)
+      lookup.awaitTestCompletion()
+      UIUtil.dispatchAllInvocationEvents()
+
+      assertEquals("AddedGraph", checkNotNull(graph).name)
+      assertEquals(added.virtualFile, graph.pointer.virtualFile)
+      assertEquals(1, notifications)
+      assertTrue(service.isManualGraphDataRefreshRequired)
+      assertSame(initial, service.indexForToolWindow(module))
     } finally {
       settings.automaticallyRefreshGraphData = true
       service.settingsChanged()
@@ -1164,6 +1390,47 @@ class MetroResolutionServiceTest : BasePlatformTestCase() {
     }
   }
 
+  fun testNestedTypeAliasesResolveWithExpandedKeysAndPreserveDisplayNames() {
+    val file =
+      myFixture.configureMetroFile(
+        """
+        class Box<T>
+        typealias Text = String
+        typealias Payload<T> = Box<T?>
+
+        @DependencyGraph
+        interface Graph {
+          @Named("payload") val payload: Box<String?>?
+
+          @Provides @Named("payload") fun providePayload(): Payload<Text>? = null
+          @Provides @Named("other") fun provideOther(): Payload<Text>? = null
+          @Provides @Named("payload") fun provideNonNullableElement(): Box<String>? = null
+        }
+        """
+      )
+    val index = project.service<MetroResolutionService>().awaitIndex(file)
+    val consumer = index.consumers.single()
+    val binding =
+      index.bindings.single {
+        (it.pointer.element as? KtNamedDeclaration)?.name == "providePayload"
+      }
+
+    // Identity expands each alias while display text retains the declared spelling.
+    assertEquals("test.Box<kotlin.String?>?", binding.typeKey.renderedType)
+    assertEquals(consumer.key, binding.typeKey)
+    assertEquals("Payload<Text>?", binding.typeKey.type.shortType)
+    assertEquals("kotlin.String?", binding.typeKey.type.typeArguments.single().renderedType)
+    assertEquals(listOf(binding), index.resolveConsumer(consumer).uniformBindings)
+
+    val graph = index.graphs.single()
+    val result =
+      project
+        .service<MetroGraphValidationService>()
+        .validate(file, index.contextsFor(graph).single())
+        .requireCompleted()
+    assertTrue(result.diagnostics.joinToString { it.render() }, result.diagnostics.isEmpty())
+  }
+
   fun testUnannotatedTypeAliasChangesRefreshDependentBindingKeys() {
     val aliases =
       myFixture.addFileToProject("test/Aliases.kt", "package test\n\ntypealias Alias = String")
@@ -1178,7 +1445,7 @@ class MetroResolutionServiceTest : BasePlatformTestCase() {
     val service = project.service<MetroResolutionService>()
     assertEquals(
       listOf("kotlin.String"),
-      service.awaitIndex(file).bindings.map { it.typeKey.type.classId?.asFqNameString() },
+      service.awaitIndex(file).bindings.map { it.typeKey.renderedType },
     )
 
     myFixture.openFileInEditor(aliases.virtualFile)
@@ -1189,7 +1456,7 @@ class MetroResolutionServiceTest : BasePlatformTestCase() {
 
     assertEquals(
       listOf("kotlin.Int"),
-      service.awaitIndex(file).bindings.map { it.typeKey.type.classId?.asFqNameString() },
+      service.awaitIndex(file).bindings.map { it.typeKey.renderedType },
     )
   }
 

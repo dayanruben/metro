@@ -12,10 +12,12 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.impl.TestOnlyThreading
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.platform.eel.fs.EelFiles
 import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.SmartPointerManager
 import com.intellij.testFramework.DumbModeTestUtils
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -34,6 +36,7 @@ import dev.zacsweers.metro.idea.index.MetroResolutionService
 import dev.zacsweers.metro.idea.model.BindingIndex
 import dev.zacsweers.metro.idea.model.GraphContext
 import dev.zacsweers.metro.idea.model.KaBinding
+import dev.zacsweers.metro.idea.model.KaGraphDeclaration
 import dev.zacsweers.metro.idea.toolwindow.ExportGraphDebugInfoAction
 import dev.zacsweers.metro.idea.toolwindow.GraphContextSelectorAction
 import dev.zacsweers.metro.idea.toolwindow.IndexBuildStatusPanel
@@ -42,18 +45,26 @@ import dev.zacsweers.metro.idea.toolwindow.MetroGraphDebugExporter
 import dev.zacsweers.metro.idea.toolwindow.MetroToolWindowPanel
 import dev.zacsweers.metro.idea.toolwindow.MetroTreeNode
 import dev.zacsweers.metro.idea.toolwindow.MetroTreeStructure
+import dev.zacsweers.metro.idea.toolwindow.MetroValidationRequestService
+import dev.zacsweers.metro.idea.toolwindow.MetroValidationResultPanel
+import dev.zacsweers.metro.idea.toolwindow.MetroValidationResultTreeStructure
 import dev.zacsweers.metro.idea.toolwindow.ValidateMetroGraphAction
 import dev.zacsweers.metro.idea.toolwindow.ValidateSelectedGraphAction
 import dev.zacsweers.metro.idea.toolwindow.ValidationStatusPanel
 import dev.zacsweers.metro.idea.toolwindow.writeGraphDebugReport
 import java.nio.file.Files
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.JPanel
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtFile
 
-/** Walks [MetroTreeStructure] directly, without Swing, and asserts the produced rows. */
+/** Checks graph-browser and explicit-result rows, including platform tree refresh and selection. */
 class MetroToolWindowTreeTest : BasePlatformTestCase() {
 
   override fun setUp() {
@@ -280,18 +291,20 @@ class MetroToolWindowTreeTest : BasePlatformTestCase() {
     assertNull(pinService.pinnedPath)
   }
 
-  fun testGraphContextSelectorAcquiresReadAccess() {
+  fun testGraphContextSelectorUsesPrecomputedSnapshotWithoutReadAccess() {
     val file = configure()
     val index = project.service<MetroResolutionService>().awaitIndex(file)
     val structure =
       MetroTreeStructure(project, indexProvider = { index }, pinService = project.service()) {
         filter
       }
+    val root = structure.rootElement as MetroTreeNode
+    structure.children(root)
     val application = ApplicationManager.getApplication()
     val action =
       GraphContextSelectorAction(project.service()) {
-        assertTrue(application.isReadAccessAllowed)
-        structure.availableContexts()
+        assertFalse(application.isReadAccessAllowed)
+        structure.contextOptions()
       }
     var contextActionName: String? = null
 
@@ -555,6 +568,14 @@ class MetroToolWindowTreeTest : BasePlatformTestCase() {
     assertFalse(panel.progressBar.isVisible)
     assertEquals("Metro graphs have not been loaded", panel.messageLabel.text)
 
+    panel.showRefreshRequired()
+    assertTrue(panel.isVisible)
+    assertFalse(panel.progressBar.isVisible)
+    assertEquals(
+      "Metro graph data may be stale. Click Refresh to update",
+      panel.messageLabel.text,
+    )
+
     panel.clear()
     assertFalse(panel.isVisible)
   }
@@ -650,6 +671,314 @@ class MetroToolWindowTreeTest : BasePlatformTestCase() {
     }
   }
 
+  fun testManualValidationShowsNewGraphResultsWithoutRefreshingBrowser() {
+    assertManualValidationResult(rename = false)
+  }
+
+  fun testManualValidationShowsRenamedGraphResultsWithoutRefreshingBrowser() {
+    assertManualValidationResult(rename = true)
+  }
+
+  /** A requested graph can be absent from the browser's retained generation. */
+  private fun assertManualValidationResult(rename: Boolean) {
+    val file =
+      myFixture.configureMetroFile(
+        """
+        interface MissingThing
+
+        @DependencyGraph interface AppGraph {
+          val missing: MissingThing
+        }
+        """
+      )
+    val service = project.service<MetroResolutionService>()
+    val initial = service.awaitIndex(file)
+    val originalGraph = initial.graphs.single()
+    val settings = MetroSettings.getInstance(project).state
+    val previousAutomaticRefresh = settings.automaticallyRefreshGraphData
+    settings.automaticallyRefreshGraphData = false
+    service.settingsChanged()
+    service.activateGraphBrowser()
+    val panel = MetroToolWindowPanel(project)
+    try {
+      val browser = toolWindowTree(panel)
+      treeNodes(browser)
+      browser.setSelectionRow(0)
+      val selectedGraph = selectedTreeNode(browser) as MetroTreeNode.Graph
+      val document = checkNotNull(PsiDocumentManager.getInstance(project).getDocument(file))
+      val requestedName = if (rename) "RenamedGraph" else "AddedGraph"
+      WriteCommandAction.runWriteCommandAction(project) {
+        if (rename) {
+          val offset = document.text.indexOf("AppGraph")
+          document.replaceString(offset, offset + "AppGraph".length, requestedName)
+        } else {
+          document.insertString(
+            document.textLength,
+            "\n@DependencyGraph interface AddedGraph { val missing: MissingThing }\n",
+          )
+        }
+      }
+      PsiDocumentManager.getInstance(project).commitAllDocuments()
+      panel.selectAndValidate(ClassId.topLevel(FqName("test.$requestedName")), file.virtualFile)
+
+      val results = waitForValidationResults(panel)
+      val rows = treeNodes(results.tree)
+      val resultGraph = rows.filterIsInstance<MetroTreeNode.Graph>().single()
+      assertEquals(requestedName, resultGraph.graph.name)
+      val diagnostic = rows.filterIsInstance<MetroTreeNode.Diagnostic>().single()
+      assertEquals(MetroDiagnosticId.MISSING_BINDING, diagnostic.diagnostic.id)
+      val stack = rows.filterIsInstance<MetroTreeNode.StackEntry>()
+      assertTrue(stack.isNotEmpty())
+      assertTrue(stack.any { it.pointer?.element != null })
+      val validation = rows.filterIsInstance<MetroTreeNode.Validation>().single()
+      assertEquals("1 problem", validation.grayText)
+      assertSame(initial, service.indexForToolWindow(module))
+      assertTrue(service.isManualGraphDataRefreshRequired)
+      assertEquals(
+        listOf(originalGraph.declarationId),
+        treeNodes(browser).filterIsInstance<MetroTreeNode.Graph>().map { it.graph.declarationId },
+      )
+      assertEquals(selectedGraph, selectedTreeNode(browser))
+
+      val closeEvent =
+        AnActionEvent.createFromAnAction(
+          results.closeAction,
+          null,
+          ActionPlaces.UNKNOWN,
+          DataContext { null },
+        )
+      results.closeAction.actionPerformed(closeEvent)
+      assertFalse(results.isVisible)
+      assertEquals(selectedGraph, selectedTreeNode(browser))
+      assertSame(initial, service.indexForToolWindow(module))
+    } finally {
+      Disposer.dispose(panel)
+      settings.automaticallyRefreshGraphData = previousAutomaticRefresh
+      service.settingsChanged()
+    }
+  }
+
+  fun testValidationResultViewShowsCleanGraphAndExtensions() {
+    val file =
+      myFixture.configureMetroFile(
+        """
+        @GraphExtension interface ChildGraph
+
+        @DependencyGraph interface AppGraph {
+          val child: ChildGraph
+        }
+        """
+      )
+    val index = project.service<MetroResolutionService>().awaitIndex(file)
+    val graph = index.graphs.single { it.name == "AppGraph" }
+    val panel = MetroToolWindowPanel(project)
+    try {
+      panel.selectAndValidate(checkNotNull(graph.classId), file.virtualFile)
+      val results = waitForValidationResults(panel)
+      val rows = treeNodes(results.tree)
+      val graphRows = rows.filterIsInstance<MetroTreeNode.Graph>()
+      assertEquals(listOf("AppGraph", "ChildGraph"), graphRows.map { it.graph.name })
+      assertTrue(graphRows.last().text, "via AppGraph" in graphRows.last().text)
+      assertTrue(graphRows.all { it.grayText == "no problems found" })
+      assertTrue(rows.none { it is MetroTreeNode.Diagnostic })
+      assertEquals(2, rows.filterIsInstance<MetroTreeNode.Validation>().size)
+      object : WaitFor(30_000) {
+          override fun condition(): Boolean {
+            PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+            return selectedTreeNode(toolWindowTree(panel)) is MetroTreeNode.Validation
+          }
+        }
+        .assertCompleted("Validation should still select the browser's result node")
+    } finally {
+      Disposer.dispose(panel)
+    }
+  }
+
+  fun testValidationResultRowsRemainAvailableDuringIdeIndexing() {
+    val file =
+      myFixture.configureMetroFile(
+        """
+        @DependencyGraph interface IncompleteGraph
+        @DependencyGraph interface ErroredGraph
+        """
+      )
+    val index = project.service<MetroResolutionService>().awaitIndex(file)
+    val contexts = index.graphs.associate { it.name to index.contextsFor(it).single() }
+    val results = MetroValidationResultTreeStructure(project)
+    results.showResults(
+      listOf(
+        KaGraphValidationResult.Incomplete(contexts.getValue("IncompleteGraph"), "analysis limit"),
+        KaGraphValidationResult.InternalError(
+          contexts.getValue("ErroredGraph"),
+          IllegalStateException(),
+        ),
+      )
+    )
+    DumbModeTestUtils.runInDumbModeSynchronously(project) {
+      val graphs =
+        results.getChildElements(results.rootElement).filterIsInstance<MetroTreeNode.Graph>()
+      assertEquals(2, graphs.size)
+      val summaries = graphs.flatMap { graph ->
+        val validation = results.getChildElements(graph).single()
+        results.getChildElements(validation).map { (it as MetroTreeNode).text }
+      }
+      assertEquals(
+        setOf(
+          "Validation incomplete: analysis limit",
+          "Validation failed due to an internal Metro plugin error",
+        ),
+        summaries.toSet(),
+      )
+    }
+    results.showResults(emptyList())
+    assertEquals(
+      "No graph contexts were available for validation",
+      (results.getChildElements(results.rootElement).single() as MetroTreeNode.Summary).text,
+    )
+  }
+
+  fun testLateValidationCannotReplaceTheLatestRequestedResult() {
+    assertLateValidationResultIgnored(disposePanel = false)
+  }
+
+  fun testDisposedPanelDoesNotShowACompletedValidationResult() {
+    assertLateValidationResultIgnored(disposePanel = true)
+  }
+
+  fun testClosingValidationResultsDropsPendingNavigation() {
+    assertOldResultNavigationIgnored(replaceResults = false)
+  }
+
+  fun testNewValidationResultsDropPendingNavigation() {
+    assertOldResultNavigationIgnored(replaceResults = true)
+  }
+
+  /** Closing or replacing a visible result must invalidate navigation already resolving for it. */
+  private fun assertOldResultNavigationIgnored(replaceResults: Boolean) {
+    val file =
+      myFixture.configureMetroFile(
+        """
+        @DependencyGraph interface EarlierGraph
+        @DependencyGraph interface LatestGraph
+        """
+      )
+    project.service<MetroResolutionService>().awaitIndex(file)
+    val panel = MetroToolWindowPanel(project)
+    val service = project.service<MetroNavigationService>()
+    val resolutionStarted = CompletableFuture<Unit>()
+    val releaseResolution = CompletableDeferred<Unit>()
+    val editors = FileEditorManager.getInstance(project)
+    try {
+      panel.selectAndValidate(ClassId.topLevel(FqName("test.EarlierGraph")), file.virtualFile)
+      val results = waitForValidationResults(panel)
+      treeNodes(results.tree)
+      results.tree.setSelectionRow(0)
+      editors.closeFile(file.virtualFile)
+      assertFalse(editors.isFileOpen(file.virtualFile))
+      service.setTargetResolutionObserver {
+        resolutionStarted.complete(Unit)
+        releaseResolution.await()
+      }
+      val navigation = checkNotNull(results.navigateSelected())
+      val navigationFinished = CompletableFuture<Unit>()
+      navigation.invokeOnCompletion { navigationFinished.complete(Unit) }
+      PlatformTestUtil.waitForFuture(resolutionStarted, 30_000)
+
+      if (replaceResults) {
+        panel.selectAndValidate(ClassId.topLevel(FqName("test.LatestGraph")), file.virtualFile)
+        waitForValidationResults(panel)
+      } else {
+        results.closeAction.actionPerformed(
+          AnActionEvent.createFromAnAction(results.closeAction, null, ActionPlaces.UNKNOWN) { null }
+        )
+      }
+      releaseResolution.complete(Unit)
+      PlatformTestUtil.waitForFuture(navigationFinished, 30_000)
+      PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+      assertFalse(
+        "The previous result must not reopen its source file",
+        editors.isFileOpen(file.virtualFile),
+      )
+
+      if (replaceResults) {
+        service.setTargetResolutionObserver(null)
+        treeNodes(results.tree)
+        results.tree.setSelectionRow(0)
+        val currentNavigation = checkNotNull(results.navigateSelected())
+        val currentNavigationFinished = CompletableFuture<Unit>()
+        currentNavigation.invokeOnCompletion { currentNavigationFinished.complete(Unit) }
+        PlatformTestUtil.waitForFuture(currentNavigationFinished, 30_000)
+        PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        assertTrue(
+          "The current result should remain navigable",
+          editors.isFileOpen(file.virtualFile),
+        )
+      }
+    } finally {
+      releaseResolution.complete(Unit)
+      service.setTargetResolutionObserver(null)
+      Disposer.dispose(panel)
+    }
+  }
+
+  /** Different graph paths can finish out of order while the panel shows its latest request. */
+  private fun assertLateValidationResultIgnored(disposePanel: Boolean) {
+    val file =
+      myFixture.configureMetroFile(
+        """
+        @DependencyGraph interface EarlierGraph
+        @DependencyGraph interface LatestGraph
+        """
+      )
+    val index = project.service<MetroResolutionService>().awaitIndex(file)
+    val earlier = index.graphs.single { it.name == "EarlierGraph" }
+    val latest = index.graphs.single { it.name == "LatestGraph" }
+    val earlierPath = index.contextsFor(earlier).single().path
+    val validationService = project.service<MetroGraphValidationService>()
+    val publicationReady = CompletableFuture<Unit>()
+    val releasePublication = CountDownLatch(1)
+    val panel = MetroToolWindowPanel(project)
+    validationService.setBeforeValidationPublicationObserver { path, _ ->
+      if (path == earlierPath) {
+        publicationReady.complete(Unit)
+        releasePublication.await()
+      }
+    }
+    try {
+      panel.selectAndValidate(checkNotNull(earlier.classId), file.virtualFile)
+      PlatformTestUtil.waitForFuture(publicationReady, 30_000)
+      if (disposePanel) {
+        Disposer.dispose(panel)
+      } else {
+        panel.selectAndValidate(checkNotNull(latest.classId), file.virtualFile)
+        waitForValidationResults(panel)
+      }
+      releasePublication.countDown()
+      object : WaitFor(30_000) {
+          override fun condition(): Boolean {
+            PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+            return !validationService.isValidationRunning(earlierPath)
+          }
+        }
+        .assertCompleted("The earlier validation should finish")
+      val results =
+        com.intellij.util.ui.UIUtil.findComponentOfType(
+          panel,
+          MetroValidationResultPanel::class.java,
+        )
+      if (disposePanel) {
+        assertNull(results)
+      } else {
+        val graphs = treeNodes(checkNotNull(results).tree).filterIsInstance<MetroTreeNode.Graph>()
+        assertEquals(listOf("LatestGraph"), graphs.map { it.graph.name })
+      }
+    } finally {
+      releasePublication.countDown()
+      validationService.setBeforeValidationPublicationObserver(null)
+      if (!Disposer.isDisposed(panel)) Disposer.dispose(panel)
+    }
+  }
+
   fun testToolWindowPanelRecoversAfterDumbMode() {
     val file = configure()
     project.service<MetroResolutionService>().awaitIndex(file)
@@ -685,6 +1014,99 @@ class MetroToolWindowTreeTest : BasePlatformTestCase() {
     panel.selectAndValidate(checkNotNull(graph.classId), file.virtualFile)
 
     assertNull(project.service<MetroGraphValidationService>().cachedResult(file, context))
+  }
+
+  fun testDisposedToolWindowOwnerDropsPendingNavigation() {
+    val file = configure()
+    val pointer =
+      SmartPointerManager.getInstance(project)
+        .createSmartPsiElementPointer(file.declarations.first())
+    val panel = MetroToolWindowPanel(project)
+    val service = project.service<MetroNavigationService>()
+    val resolutionStarted = CompletableFuture<Unit>()
+    val releaseResolution = CompletableDeferred<Unit>()
+    val delivered = AtomicBoolean()
+    service.setTargetResolutionObserver {
+      resolutionStarted.complete(Unit)
+      releaseResolution.await()
+    }
+
+    try {
+      val job = checkNotNull(service.resolveTargets(panel, listOf(pointer)) { delivered.set(true) })
+      PlatformTestUtil.waitForFuture(resolutionStarted, 30_000)
+      Disposer.dispose(panel)
+      releaseResolution.complete(Unit)
+
+      object : WaitFor(30_000) {
+          override fun condition(): Boolean {
+            PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+            return job.isCompleted
+          }
+        }
+        .assertCompleted("Disposed tool-window navigation should finish without delivery")
+
+      assertFalse(delivered.get())
+      assertNull(service.resolveTargets(panel, listOf(pointer)) { delivered.set(true) })
+    } finally {
+      releaseResolution.complete(Unit)
+      service.setTargetResolutionObserver(null)
+      if (!Disposer.isDisposed(panel)) Disposer.dispose(panel)
+    }
+  }
+
+  fun testToolWindowRejectsValidationSupersededBeforeItsTargetResolves() {
+    val file = configure()
+    val index = project.service<MetroResolutionService>().awaitIndex(file)
+    val graph = index.graphs.single()
+    val context = index.contextsFor(graph).single()
+    val requestService = project.service<MetroValidationRequestService>()
+    val staleRequest = requestService.beginRequest()
+    requestService.beginRequest()
+    val panel = MetroToolWindowPanel(project)
+    try {
+      panel.selectAndValidate(checkNotNull(graph.classId), file.virtualFile, staleRequest)
+
+      assertNull(project.service<MetroGraphValidationService>().cachedResult(file, context))
+    } finally {
+      Disposer.dispose(panel)
+    }
+  }
+
+  fun testReplacementGraphLookupIgnoresCanceledLookupCompletion() {
+    val file = configure()
+    val graph = project.service<MetroResolutionService>().awaitIndex(file).graphs.single()
+    val lookupFile = myFixture.addFileToProject("test/Lookup.kt", "package test")
+    val callbacks = mutableListOf<(KaGraphDeclaration?) -> Unit>()
+    val jobs = mutableListOf<Job>()
+    val panel =
+      MetroToolWindowPanel(project) { _, _, callback ->
+        callbacks += callback
+        Job().also(jobs::add)
+      }
+    try {
+      panel.selectAndValidate(checkNotNull(graph.classId), lookupFile.virtualFile)
+      object : WaitFor(30_000) {
+          override fun condition(): Boolean {
+            PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+            return callbacks.isNotEmpty()
+          }
+        }
+        .assertCompleted("The first graph lookup should start")
+
+      val canceledLookup = callbacks.lastIndex
+      panel.retryPendingValidationForTest()
+      val replacementLookup = callbacks.lastIndex
+
+      assertEquals(canceledLookup + 1, replacementLookup)
+      assertTrue(jobs[canceledLookup].isCancelled)
+      callbacks[canceledLookup](null)
+      assertTrue(panel.hasPendingValidationLookupForTest())
+
+      callbacks[replacementLookup](null)
+      assertFalse(panel.hasPendingValidationLookupForTest())
+    } finally {
+      Disposer.dispose(panel)
+    }
   }
 
   fun testMissingRequestedGraphDoesNotValidateTheSelectedGraph() {
@@ -1045,9 +1467,38 @@ class MetroToolWindowTreeTest : BasePlatformTestCase() {
       .first()
   }
 
-  private fun toolWindowTree(panel: MetroToolWindowPanel): Tree {
-    return com.intellij.util.ui.UIUtil.findComponentOfType(panel, Tree::class.java)
-      ?: error("Metro tool window has no tree")
+  private fun toolWindowTree(panel: MetroToolWindowPanel): Tree = panel.tree
+
+  /** Waits for the callback-owned pane; its tree is separate from the graph browser. */
+  private fun waitForValidationResults(panel: MetroToolWindowPanel): MetroValidationResultPanel {
+    var results: MetroValidationResultPanel? = null
+    object : WaitFor(30_000) {
+        override fun condition(): Boolean {
+          PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+          results =
+            com.intellij.util.ui.UIUtil.findComponentOfType(
+              panel,
+              MetroValidationResultPanel::class.java,
+            )
+          return results?.isVisible == true
+        }
+      }
+      .assertCompleted("The requested validation should show its result")
+    return checkNotNull(results)
+  }
+
+  /** Expands lazy result rows through the platform model before reading their display data. */
+  private fun treeNodes(tree: Tree): List<MetroTreeNode> {
+    PlatformTestUtil.waitForPromise(TreeUtil.promiseExpandAll(tree))
+    return (0 until tree.rowCount).mapNotNull { row ->
+      val path = tree.getPathForRow(row)
+      TreeUtil.getLastUserObject(NodeDescriptor::class.java, path)?.element as? MetroTreeNode
+    }
+  }
+
+  private fun selectedTreeNode(tree: Tree): MetroTreeNode? {
+    val path = tree.selectionPath ?: return null
+    return TreeUtil.getLastUserObject(NodeDescriptor::class.java, path)?.element as? MetroTreeNode
   }
 
   private fun toolWindowStatus(panel: MetroToolWindowPanel): IndexBuildStatusPanel {

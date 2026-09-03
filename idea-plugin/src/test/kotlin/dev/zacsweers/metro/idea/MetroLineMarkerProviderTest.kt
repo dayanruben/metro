@@ -3,14 +3,28 @@
 package dev.zacsweers.metro.idea
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.psi.PsiElement
+import com.intellij.psi.SmartPointerManager
+import com.intellij.psi.SmartPsiElementPointer
+import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import dev.zacsweers.metro.idea.graph.KaGraphValidationResult
 import dev.zacsweers.metro.idea.graph.MetroGraphValidationService
 import dev.zacsweers.metro.idea.index.MetroResolutionService
+import dev.zacsweers.metro.idea.index.resolveLineMarkerTargets
 import dev.zacsweers.metro.idea.model.BindingIndex
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtNamedDeclaration
 
 class MetroLineMarkerProviderTest : BasePlatformTestCase() {
 
@@ -78,6 +92,132 @@ class MetroLineMarkerProviderTest : BasePlatformTestCase() {
         MetroIcons.CONTRIBUTED,
       )
     return myFixture.findAllGutters().filter { it.icon in metroIcons }.mapNotNull { it.tooltipText }
+  }
+
+  fun testLineMarkerNavigationOrdersTargetsInBackgroundReadAction() {
+    val file =
+      myFixture.configureByText(
+        "Navigation.kt",
+        """
+        fun zed() = Unit
+        fun sameName(value: Int) = value
+        fun alpha() = Unit
+        fun sameName(value: String) = value
+        """
+          .trimIndent(),
+      ) as KtFile
+    val declarations = file.declarations.filterIsInstance<KtNamedDeclaration>()
+    val pointerManager = SmartPointerManager.getInstance(project)
+    val resolvedOnEdt = AtomicBoolean()
+    val resolvedWithoutReadAccess = AtomicBoolean()
+    // Equal declaration names retain their input order, including overloads supplied in reverse.
+    val targets =
+      listOf(declarations[0], declarations[3], declarations[2], declarations[1]).map { declaration
+        ->
+        val pointer = pointerManager.createSmartPsiElementPointer(declaration)
+        object : SmartPsiElementPointer<KtNamedDeclaration> by pointer {
+          override fun getElement(): KtNamedDeclaration? {
+            val application = ApplicationManager.getApplication()
+            if (application.isDispatchThread) resolvedOnEdt.set(true)
+            if (!application.isReadAccessAllowed) resolvedWithoutReadAccess.set(true)
+            return pointer.element
+          }
+        }
+      }
+    val delivered = CompletableFuture<List<PsiElement>>()
+
+    val job =
+      checkNotNull(resolveLineMarkerTargets(null, project, targets) { delivered.complete(it) })
+    job.invokeOnCompletion { failure ->
+      if (failure != null) delivered.completeExceptionally(failure)
+    }
+    PlatformTestUtil.waitForFuture(delivered, 30_000)
+
+    assertEquals(
+      listOf(declarations[2], declarations[3], declarations[1], declarations[0]),
+      delivered.join(),
+    )
+    assertFalse(resolvedOnEdt.get())
+    assertFalse(resolvedWithoutReadAccess.get())
+  }
+
+  fun testNewEditorNavigationSupersedesPendingRequest() {
+    val file =
+      myFixture.configureByText(
+        "Navigation.kt",
+        """
+        class First
+        class Second
+        """
+          .trimIndent(),
+      ) as KtFile
+    val declarations = file.declarations.filterIsInstance<KtNamedDeclaration>()
+    val pointerManager = SmartPointerManager.getInstance(project)
+    val firstPointer =
+      pointerManager.createSmartPsiElementPointer(declarations.single { it.name == "First" })
+    val secondPointer =
+      pointerManager.createSmartPsiElementPointer(declarations.single { it.name == "Second" })
+    val service = project.service<MetroNavigationService>()
+    val firstStarted = CompletableFuture<Unit>()
+    val releaseFirst = CompletableDeferred<Unit>()
+    val attempts = AtomicInteger()
+    val firstDelivered = AtomicBoolean()
+    val secondDelivered = CompletableFuture<String>()
+    service.setTargetResolutionObserver {
+      if (attempts.incrementAndGet() == 1) {
+        firstStarted.complete(Unit)
+        withContext(NonCancellable) { releaseFirst.await() }
+      }
+    }
+
+    try {
+      val firstJob =
+        checkNotNull(
+          service.resolveTargets(myFixture.editor, listOf(firstPointer)) {
+            firstDelivered.set(true)
+          }
+        )
+      val firstFinished = CompletableFuture<Unit>()
+      firstJob.invokeOnCompletion { firstFinished.complete(Unit) }
+      PlatformTestUtil.waitForFuture(firstStarted, 30_000)
+
+      val secondJob =
+        checkNotNull(
+          service.resolveTargets(myFixture.editor, listOf(secondPointer)) { targets ->
+            val name = checkNotNull((targets.single() as KtNamedDeclaration).name)
+            secondDelivered.complete(name)
+          }
+        )
+      PlatformTestUtil.waitForFuture(secondDelivered, 30_000)
+
+      releaseFirst.complete(Unit)
+      PlatformTestUtil.waitForFuture(firstFinished, 30_000)
+      assertEquals("Second", secondDelivered.join())
+      assertTrue(firstJob.isCancelled)
+      assertFalse(firstDelivered.get())
+      assertFalse(secondJob.isCancelled)
+    } finally {
+      releaseFirst.complete(Unit)
+      service.setTargetResolutionObserver(null)
+    }
+  }
+
+  fun testOwnerlessLineMarkerNavigationUsesProjectLifecycle() {
+    val file = myFixture.configureByText("Navigation.kt", "class Target") as KtFile
+    val target = file.declarations.single() as KtNamedDeclaration
+    val pointer = SmartPointerManager.getInstance(project).createSmartPsiElementPointer(target)
+    FileEditorManager.getInstance(project).closeFile(file.virtualFile)
+    assertNull(FileEditorManager.getInstance(project).selectedTextEditor)
+    val delivered = CompletableFuture<String>()
+
+    val job =
+      resolveLineMarkerTargets(null, project, listOf(pointer)) { targets ->
+        delivered.complete(checkNotNull((targets.single() as KtNamedDeclaration).name))
+      }
+
+    checkNotNull(job)
+    PlatformTestUtil.waitForFuture(delivered, 30_000)
+    assertEquals("Target", delivered.join())
   }
 
   fun testInjectorMarkerTargetsInjectedMembers() {

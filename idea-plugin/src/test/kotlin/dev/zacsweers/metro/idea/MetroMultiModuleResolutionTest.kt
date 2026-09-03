@@ -10,7 +10,9 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.roots.ModuleRootModificationUtil
+import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiManager
 import com.intellij.psi.SmartPointerManager
 import com.intellij.testFramework.IndexingTestUtil
 import com.intellij.testFramework.PlatformTestUtil
@@ -142,6 +144,260 @@ class MetroMultiModuleResolutionTest : UsefulTestCase() {
     assertFalse(appView.sharesVisibilityArrayWith(libraryView))
     assertTrue(appView.resolutionScope.contains(libraryFile))
     assertFalse(libraryView.resolutionScope.contains(appFile))
+  }
+
+  fun testTrackedDirectoryMoveRefreshesModuleOptionsAndDependentShards() {
+    val libraryFile =
+      fixture.addFileToProject(
+        "library/moved/MovedGraph.kt",
+        """
+        package moved
+
+        import dev.zacsweers.metro.*
+
+        @Inject class MovedValue
+
+        interface MovedAccessors {
+          val value: MovedValue
+        }
+
+        @DependencyGraph
+        interface MovedGraph {
+          val provider: () -> MovedValue
+        }
+        """
+          .trimIndent(),
+      ) as KtFile
+    val appFile =
+      fixture.addFileToProject(
+        "app/app/AppGraph.kt",
+        """
+        package app
+
+        import dev.zacsweers.metro.DependencyGraph
+        import moved.MovedAccessors
+
+        @DependencyGraph interface AppGraph : MovedAccessors
+        """
+          .trimIndent(),
+      ) as KtFile
+    val appModule = checkNotNull(ModuleUtilCore.findModuleForPsiElement(appFile))
+    val libraryModule = checkNotNull(ModuleUtilCore.findModuleForPsiElement(libraryFile))
+    appModule.setModuleMetroOptions(
+      "enable-function-providers" to "true",
+      "enable-dagger-anvil-interop" to "true",
+    )
+    libraryModule.setModuleMetroOptions(
+      "enable-function-providers" to "false",
+      "enable-dagger-anvil-interop" to "false",
+    )
+    PsiDocumentManager.getInstance(fixture.project).commitAllDocuments()
+    IndexingTestUtil.waitUntilIndexesAreReady(fixture.project)
+
+    val service = fixture.project.service<MetroResolutionService>()
+    service.awaitIndex(appFile)
+    val initial = service.awaitIndex(libraryFile)
+    val initialGraph = initial.graphs.single { it.name == "MovedGraph" }
+    val initialAppGraph = initial.graphs.single { it.name == "AppGraph" }
+    val initialInherited = initial.consumers.single { it.graphId == initialAppGraph.declarationId }
+    val initialModule =
+      checkNotNull(initial.resolutionInputs.moduleViewFor(libraryFile.virtualFile))
+    assertFalse(initialGraph.daggerAnvilInteropEnabled)
+    assertFalse(initialModule.resolutionScope.contains(appFile))
+    val validation = fixture.project.service<MetroGraphValidationService>()
+    val initialResult =
+      validation
+        .validate(libraryFile, initial.contextsFor(initialGraph).single())
+        .requireCompleted()
+    assertEquals(
+      listOf(MetroDiagnosticId.MISSING_BINDING),
+      initialResult.diagnostics.map { it.id },
+    )
+
+    val movedFile = moveTrackedDirectory(libraryFile, "app")
+    assertEquals(appModule, ModuleUtilCore.findModuleForPsiElement(movedFile))
+    val updated = service.awaitIndex(movedFile)
+    val updatedGraph = updated.graphs.single { it.name == "MovedGraph" }
+    val updatedAppGraph = updated.graphs.single { it.name == "AppGraph" }
+    val updatedInherited = updated.consumers.single { it.graphId == updatedAppGraph.declarationId }
+    val updatedModule = checkNotNull(updated.resolutionInputs.moduleViewFor(movedFile.virtualFile))
+    assertNotSame(initial, updated)
+    assertEquals(initialGraph.declarationId, updatedGraph.declarationId)
+    assertTrue(updatedGraph.daggerAnvilInteropEnabled)
+    assertFalse(initialModule.module == updatedModule.module)
+    assertTrue(updatedModule.resolutionScope.contains(appFile))
+    // The unchanged app file cached inherited members from the moved declaration's file.
+    assertNotSame(initialInherited, updatedInherited)
+    assertEquals(initialInherited.key, updatedInherited.key)
+    for ((file, graph) in listOf(movedFile to updatedGraph, appFile to updatedAppGraph)) {
+      val result = validation.validate(file, updated.contextsFor(graph).single()).requireCompleted()
+      assertTrue(result.diagnostics.joinToString { it.render() }, result.diagnostics.isEmpty())
+    }
+  }
+
+  fun testTrackedDirectoryMoveRefreshesLibraryLookupWithUnchangedOptionsAndKeys() {
+    val sourceClass =
+      fixture.addFileToProject(
+        "app/libtest/LibRetargetedDependencyA.kt",
+        """
+        package libtest
+
+        import dev.zacsweers.metro.Inject
+
+        @Inject class LibRetargetedDependencyA
+        """
+          .trimIndent(),
+      ) as KtFile
+    val graphFile =
+      fixture.addFileToProject(
+        "app/moved/MovedGraph.kt",
+        """
+        package moved
+
+        import dev.zacsweers.metro.DependencyGraph
+        import libtest.LibRetargetedDependencyA
+
+        @DependencyGraph
+        interface MovedGraph {
+          val value: LibRetargetedDependencyA
+        }
+        """
+          .trimIndent(),
+      ) as KtFile
+    val bridgeFile =
+      fixture.addFileToProject(
+        "bridge/BridgeMarker.kt",
+        "package bridge\n\n@dev.zacsweers.metro.Inject class BridgeMarker",
+      ) as KtFile
+    val bridgeModule = checkNotNull(ModuleUtilCore.findModuleForPsiElement(bridgeFile))
+
+    // Each module resolves the same class name from a different declaration.
+    bridgeModule.withMetroLibFixtureLibrary {
+      PsiDocumentManager.getInstance(fixture.project).commitAllDocuments()
+      IndexingTestUtil.waitUntilIndexesAreReady(fixture.project)
+      val service = fixture.project.service<MetroResolutionService>()
+      service.awaitIndex(bridgeFile)
+      val initial = service.awaitIndex(graphFile)
+      val initialGraph = initial.graphs.single { it.name == "MovedGraph" }
+      val initialConsumer = initial.consumers.single { it.graphId == initialGraph.declarationId }
+      assertEquals(
+        listOf(sourceClass.virtualFile),
+        initial.resolveConsumer(initialConsumer).uniformBindings.orEmpty().map {
+          it.pointer.virtualFile
+        },
+      )
+      val validation = fixture.project.service<MetroGraphValidationService>()
+      val initialResult =
+        validation
+          .validate(graphFile, initial.contextsFor(initialGraph).single())
+          .requireCompleted()
+      assertTrue(
+        initialResult.diagnostics.joinToString { it.render() },
+        initialResult.diagnostics.isEmpty(),
+      )
+
+      val movedFile = moveTrackedDirectory(graphFile, "bridge")
+      assertEquals(bridgeModule, ModuleUtilCore.findModuleForPsiElement(movedFile))
+      val updated = service.awaitIndex(movedFile)
+      val updatedGraph = updated.graphs.single { it.name == "MovedGraph" }
+      val updatedConsumer = updated.consumers.single { it.graphId == updatedGraph.declarationId }
+      assertNotSame(initial, updated)
+      assertEquals(initialGraph.declarationId, updatedGraph.declarationId)
+      assertEquals(initialConsumer.key, updatedConsumer.key)
+      val moduleView = checkNotNull(updated.resolutionInputs.moduleViewFor(movedFile.virtualFile))
+      assertEquals(
+        KaModuleProvider.getModule(fixture.project, movedFile, useSiteModule = null),
+        moduleView.module,
+      )
+      assertFalse(moduleView.resolutionScope.contains(sourceClass))
+      val resolved = updated.resolveConsumer(updatedConsumer).uniformBindings.orEmpty()
+      assertEquals(1, resolved.size)
+      assertFalse(sourceClass.virtualFile == resolved.single().pointer.virtualFile)
+      val result =
+        validation
+          .validate(movedFile, updated.contextsFor(updatedGraph).single())
+          .requireCompleted()
+      assertTrue(result.diagnostics.joinToString { it.render() }, result.diagnostics.isEmpty())
+    }
+  }
+
+  fun testTrackedDirectoryMoveOfSharedDeclarationsRefreshesUnmovedGraphs() {
+    val definitions =
+      fixture.addFileToProject(
+        "library/shared/Definitions.kt",
+        """
+        package shared
+
+        @dev.zacsweers.metro.Inject class Marker
+        typealias Alias = String
+        const val SERVICE_NAME = "before"
+        """
+          .trimIndent(),
+      ) as KtFile
+    val appFile =
+      fixture.addFileToProject(
+        "app/app/AppGraph.kt",
+        """
+        package app
+
+        import dev.zacsweers.metro.*
+        import shared.Alias
+        import shared.SERVICE_NAME
+
+        @DependencyGraph
+        interface AppGraph {
+          @Named("before") val service: String
+
+          @Provides @Named(SERVICE_NAME) fun provideAlias(): Alias = error("unused")
+        }
+        """
+          .trimIndent(),
+      ) as KtFile
+    PsiDocumentManager.getInstance(fixture.project).commitAllDocuments()
+    IndexingTestUtil.waitUntilIndexesAreReady(fixture.project)
+    val service = fixture.project.service<MetroResolutionService>()
+    val initial = service.awaitIndex(appFile)
+    val initialGraph = initial.graphs.single { it.name == "AppGraph" }
+    val initialConsumer = initial.consumers.single { it.graphId == initialGraph.declarationId }
+    assertEquals(
+      "Consumer ${initialConsumer.key}; bindings ${initial.bindings.map { it.typeKey }}",
+      1,
+      initial.resolveConsumer(initialConsumer).uniformBindings.orEmpty().size,
+    )
+    val initialBinding =
+      initial.bindings.single {
+        (it.pointer.element as? KtNamedDeclaration)?.name == "provideAlias"
+      }
+
+    // The fingerprint text stays equal while the app loses access to both shared declarations.
+    moveTrackedDirectory(definitions, "bridge")
+    val updated = service.awaitIndex(appFile)
+    assertNotSame(initial, updated)
+    assertTrue(updated.bindings.none { it.typeKey == initialBinding.typeKey })
+    val graph = updated.graphs.single { it.name == "AppGraph" }
+    val result =
+      fixture.project
+        .service<MetroGraphValidationService>()
+        .validate(appFile, updated.contextsFor(graph).single())
+        .requireCompleted()
+    assertTrue(result.diagnostics.any { it.id == MetroDiagnosticId.MISSING_BINDING })
+  }
+
+  /** Moves a tracked subtree without rewriting Kotlin text or replacing its virtual files. */
+  private fun moveTrackedDirectory(file: KtFile, destinationRoot: String): KtFile {
+    val virtualFile = file.virtualFile
+    val modificationStamp = virtualFile.modificationStamp
+    val directory = virtualFile.parent
+    val destination = fixture.tempDirFixture.findOrCreateDir(destinationRoot)
+    val rootTracker = ProjectRootModificationTracker.getInstance(fixture.project)
+    val rootsBeforeMove = rootTracker.modificationCount
+    WriteCommandAction.runWriteCommandAction(fixture.project) { directory.move(this, destination) }
+    PsiDocumentManager.getInstance(fixture.project).commitAllDocuments()
+    IndexingTestUtil.waitUntilIndexesAreReady(fixture.project)
+    assertEquals(virtualFile, destination.findChild(directory.name)?.findChild(virtualFile.name))
+    assertEquals(modificationStamp, virtualFile.modificationStamp)
+    assertEquals(rootsBeforeMove, rootTracker.modificationCount)
+    return checkNotNull(PsiManager.getInstance(fixture.project).findFile(virtualFile) as? KtFile)
   }
 
   fun testContributedInterfacesProvideInheritedRootsAcrossModules() {
@@ -639,6 +895,160 @@ class MetroMultiModuleResolutionTest : UsefulTestCase() {
     val excluded =
       validation.validate(apiFile, childContexts.getValue("ExcludedParent")).requireCompleted()
     assertEquals(listOf(MetroDiagnosticId.MISSING_BINDING), excluded.diagnostics.map { it.id })
+  }
+
+  fun testContributedChildOwnershipSurvivesLibraryRefreshAndSourceReparse() {
+    val apiFile =
+      fixture.addFileToProject(
+        "library/ownership/GraphApi.kt",
+        """
+        package ownership
+
+        import dev.zacsweers.metro.*
+
+        interface ChildScope
+
+        @GraphExtension(ChildScope::class)
+        interface SharedChild
+        """
+          .trimIndent(),
+      ) as KtFile
+    val accessorsFile =
+      fixture.addFileToProject(
+        "app/ownership/ChildAccessors.kt",
+        """
+        package ownership
+
+        import dev.zacsweers.metro.*
+        import libtest.LibRetargetedDependencyA
+
+        interface LibraryAccessors {
+          val required: LibRetargetedDependencyA
+          val implemented: LibRetargetedDependencyA
+        }
+
+        @ContributesTo(ChildScope::class)
+        interface AppChildAccessors : LibraryAccessors {
+          override val implemented: LibRetargetedDependencyA get() = error("supplied")
+
+          @Provides fun provideCount(dependency: LibRetargetedDependencyA): Int = 0
+          @Provides fun provideText(dependency: LibRetargetedDependencyA): String = ""
+        }
+
+        @ContributesTo(ChildScope::class)
+        interface ExcludedChildAccessors : LibraryAccessors
+        """
+          .trimIndent(),
+      ) as KtFile
+    val appFile =
+      fixture.addFileToProject(
+        "app/ownership/Parent.kt",
+        """
+        package ownership
+
+        import dev.zacsweers.metro.*
+
+        @DependencyGraph(excludes = [ExcludedChildAccessors::class])
+        interface ParentGraph {
+          val child: SharedChild
+        }
+        """
+          .trimIndent(),
+      ) as KtFile
+    val appModule = checkNotNull(ModuleUtilCore.findModuleForPsiElement(appFile))
+    val service = fixture.project.service<MetroResolutionService>()
+    val settings = MetroSettings.getInstance(fixture.project).state
+    val previousResolveFromLibraries = settings.resolveFromLibraries
+
+    appModule.withMetroLibFixtureLibrary {
+      PsiDocumentManager.getInstance(fixture.project).commitAllDocuments()
+      IndexingTestUtil.waitUntilIndexesAreReady(fixture.project)
+      service.awaitIndex(apiFile)
+      val initial = service.awaitIndex(appFile)
+      val ownership = ConsumerOwnershipBundle.build(initial)
+
+      fun assertOwnership(index: BindingIndex) {
+        val child = index.graphs.single { it.name == "SharedChild" }
+        val parent = index.graphs.single { it.name == "ParentGraph" }
+        fun consumer(name: String, contribution: String) =
+          index.consumers.single {
+            it.graphId == child.declarationId &&
+              it.graphContribution?.classId?.shortClassName?.asString() == contribution &&
+              (it.pointer.element as? KtNamedDeclaration)?.name == name
+          }
+
+        val required = consumer("required", "AppChildAccessors")
+        assertEquals(
+          listOf(parent.pointer.element),
+          ownership.owningGraphPointers(required)?.map { it.element },
+        )
+        // The same key can belong to an implemented declaration or an excluded contribution.
+        val implemented = consumer("implemented", "AppChildAccessors")
+        assertTrue(ownership.owningGraphPointers(implemented)?.isEmpty() == true)
+        val excluded = consumer("required", "ExcludedChildAccessors")
+        assertTrue(ownership.owningGraphPointers(excluded)?.isEmpty() == true)
+        val providerParameters =
+          index.consumers.filter {
+            it.graphId == child.declarationId &&
+              (it.pointer.element as? KtNamedDeclaration)?.name == "dependency"
+          }
+        assertEquals(2, providerParameters.size)
+        for (parameter in providerParameters) {
+          assertEquals(
+            listOf(parent.pointer.element),
+            ownership.owningGraphPointers(parameter)?.map { it.element },
+          )
+        }
+      }
+
+      fun assertResolved(index: BindingIndex) {
+        val child = index.graphs.single { it.name == "SharedChild" }
+        val result =
+          fixture.project
+            .service<MetroGraphValidationService>()
+            .validate(apiFile, index.contextsFor(child).single())
+            .requireCompleted()
+        assertTrue(result.diagnostics.joinToString { it.render() }, result.diagnostics.isEmpty())
+        assertTrue(
+          result.bindings.any { key, _ -> key.renderedType == "libtest.LibRetargetedDependencyA" }
+        )
+      }
+
+      fun rebuildLibraryIndex(): BindingIndex {
+        settings.resolveFromLibraries = false
+        service.settingsChanged()
+        service.awaitIndex(appFile)
+        settings.resolveFromLibraries = true
+        service.settingsChanged()
+        service.awaitIndex(apiFile)
+        return service.awaitIndex(appFile)
+      }
+
+      try {
+        assertOwnership(initial)
+        assertResolved(initial)
+        // Clearing the binary cache retains the source summary and recreates contributed consumers.
+        val refreshed = rebuildLibraryIndex()
+        assertOwnership(refreshed)
+        assertResolved(refreshed)
+
+        val document =
+          checkNotNull(PsiDocumentManager.getInstance(fixture.project).getDocument(accessorsFile))
+        WriteCommandAction.runWriteCommandAction(fixture.project) {
+          document.insertString(
+            0,
+            "// Move declaration offsets without changing library requests.\n",
+          )
+        }
+        PsiDocumentManager.getInstance(fixture.project).commitAllDocuments()
+        val reparsed = rebuildLibraryIndex()
+        assertOwnership(reparsed)
+        assertResolved(reparsed)
+      } finally {
+        settings.resolveFromLibraries = previousResolveFromLibraries
+        service.settingsChanged()
+      }
+    }
   }
 
   fun testConsumerResolutionUsesEachGraphModuleAsTheUseSite() {
