@@ -2,10 +2,11 @@
 # Copyright (C) 2026 Zac Sweers
 # SPDX-License-Identifier: Apache-2.0
 
-"""Exercise required-check behavior when routing or prerequisite jobs fail."""
+"""Exercise required-check behavior and protect the snapshot publication gates."""
 
 import importlib.util
 from pathlib import Path
+import re
 import unittest
 
 spec = importlib.util.spec_from_file_location("check_ci_status", Path(__file__).with_name("check-ci-status.py"))
@@ -73,6 +74,60 @@ class CheckCiStatusTest(unittest.TestCase):
         needs = results()
         needs["kmp-functional"]["result"] = "skipped"
         self.assertTrue(status.check_results(needs, "ci", is_main=True))
+
+    def test_main_allows_intentionally_skipped_docs(self):
+        """Main can publish after selected checks pass with docs unselected."""
+        needs = results()
+        needs["docs"]["result"] = "skipped"
+        self.assertEqual([], status.check_results(needs, "ci", is_main=True))
+
+    def test_main_rejects_unsuccessful_required_checks(self):
+        """Every selected check must succeed before the aggregate permits publication."""
+        required = ("changes", "format", "generate-matrix", "core", "compatibility",
+                    "shaded-compiler-smoke", "js-box", "benchmarks", "samples",
+                    "idea-plugin", "kmp-functional")
+        for name in required:
+            for result in ("failure", "cancelled", "skipped", None):
+                with self.subTest(job=name, result=result):
+                    needs = results()
+                    needs["docs"]["result"] = "skipped"
+                    needs[name]["result"] = result
+                    self.assertTrue(status.check_results(needs, "ci", is_main=True))
+
+    def test_selected_docs_must_succeed(self):
+        """Docs can skip only when the classifier leaves them unselected."""
+        for result in ("failure", "cancelled", "skipped", None):
+            with self.subTest(result=result):
+                needs = results(docs="true")
+                needs["docs"]["result"] = result
+                self.assertIn(f"docs: {result or 'missing'}", status.check_results(needs, "ci"))
+
+
+class SnapshotPublishConditionTest(unittest.TestCase):
+    """Protect the workflow contract; GitHub evaluates status across the dependency chain."""
+
+    def test_publish_gates(self):
+        """Intentional skips require explicit status plus all existing publication gates."""
+        workflow = Path(__file__).resolve().parents[1] / ".github/workflows/ci.yml"
+        publish = re.search(r"(?ms)^  publish:\n(.*?)(?=^  [\w-]+:|\Z)", workflow.read_text())
+        self.assertIsNotNone(publish, "Missing publish job")
+        body = publish.group(1)
+        self.assertRegex(body, r"(?m)^    needs:\n      - final-status$")
+
+        # Read the job-level scalar and its continuation lines using the workflow's indentation.
+        condition = re.search(r"(?m)^    if: (.+(?:\n      .+)*)", body)
+        self.assertIsNotNone(condition, "Missing publish condition")
+        expression = " ".join(condition.group(1).split())
+        expression = expression.removeprefix(">- ").removeprefix("${{ ").removesuffix(" }}")
+        self.assertCountEqual(
+            [
+                "!cancelled()",
+                "needs.final-status.result == 'success'",
+                "github.ref == 'refs/heads/main'",
+                "github.repository == 'zacsweers/metro'",
+            ],
+            expression.split(" && "),
+        )
 
 
 if __name__ == "__main__":

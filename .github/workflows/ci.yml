@@ -606,7 +606,14 @@ jobs:
   publish:
     name: Publish snapshot (main only)
     runs-on: macos-latest
-    if: github.ref == 'refs/heads/main' && github.repository == 'zacsweers/metro'
+    # Skipped ancestors can block publish after final-status succeeds unless status is explicit.
+    if: >-
+      ${{
+        !cancelled() &&
+        needs.final-status.result == 'success' &&
+        github.ref == 'refs/heads/main' &&
+        github.repository == 'zacsweers/metro'
+      }}
     needs:
       - final-status
 
