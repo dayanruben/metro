@@ -3080,6 +3080,12 @@ public class FastInitBoxTestGenerated extends AbstractFastInitBoxTest {
       }
 
       @Test
+      @TestMetadata("MissingExternalMemberInjector.kt")
+      public void testMissingExternalMemberInjector() {
+        run("MissingExternalMemberInjector.kt");
+      }
+
+      @Test
       @TestMetadata("MultibindingEmptyDaggerSetProvider.kt")
       public void testMultibindingEmptyDaggerSetProvider() {
         run("MultibindingEmptyDaggerSetProvider.kt");
