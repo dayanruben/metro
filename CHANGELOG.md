@@ -38,6 +38,7 @@ Changelog
 - **[IR]** Fix `@Binds` resolution when multiple graphs use the same generic binding container with different type arguments. Each graph now resolves bindings using its own container's type arguments.
 - **[IR]** Fix missing bindings for internal contributed objects across modules when `generateContributionProviders`, `generateClassesInIr`, and `contributesAsInject` are enabled together.
 - **[IR]** Report duplicate map keys when different key annotations unwrap to the same value, including implicit class keys.
+- **[IR]** Apply contribution replacements only in the scopes that declare them.
 - **[IR]** Report missing required graph bindings even when an `@OptionalBinding` accessor requests the same type, regardless of declaration order.
 - **[IR]** Compare annotation values structurally so hash collisions don't merge distinct bindings.
 - **[IR]** Preserve JVM array component types and dimensions in source class-literal qualifiers.
