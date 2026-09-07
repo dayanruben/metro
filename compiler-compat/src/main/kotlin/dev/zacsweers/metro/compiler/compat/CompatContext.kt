@@ -337,6 +337,11 @@ public interface CompatContext {
   ): FirFunction
 
   // Changed to a new KtSourceElementOffsetStrategy overload in Kotlin 2.3.0
+  @CompatApi(
+    since = "2.5.0-dev-6460",
+    reason = CompatApi.Reason.ABI_CHANGE,
+    message = "fakeElement moved from an extension to a member function",
+  )
   public fun KtSourceElement.fakeElement(
     newKind: KtFakeSourceElementKind,
     startOffset: Int = -1,
@@ -665,7 +670,6 @@ public interface CompatContext {
     message = "2.4.20-dev-3583 split PluginGenerated into nested source element kinds",
   )
   public val pluginGeneratedSourceElementKind: KtFakeSourceElementKind
-    get() = KtFakeSourceElementKind.PluginGenerated
 
   @CompatApi(
     since = "2.4.20-dev-3583",
@@ -675,10 +679,7 @@ public interface CompatContext {
   public fun IrElement.dumpKotlinLikeCompat(
     options: KotlinLikeDumpOptions,
     classNameTransformer: (context: IrDeclaration?, declaration: IrDeclarationWithName) -> String,
-    fallback: () -> String,
-  ): String {
-    return fallback()
-  }
+  ): String
 
   /**
    * Returns the compiler's configured [MessageCollector], or a non-silent fallback if no collector

@@ -16,6 +16,7 @@ Changelog
 - **[IR]** Reduce repeated work when validating suspend multibindings and reporting suspend-binding errors. Error traces now use cached, deterministic shortest paths to a suspend binding.
 - **[IR]** Reduce repeated dependency scans when checking cycles in graphs with large multibindings.
 - **[IR]** Avoid initializing the rich terminal renderer for plain compiler diagnostics.
+- **[IR/interop]** Support Hilt interop when IR class generation is enabled.
 - **[Reports]** Explain binding choices in graph reports. Includes things like selection precedence, contribution filtering, and parent-graph ownership.
 - **[Reports]** Count emitted provider inlines in graph reports.
 - **[Reports]** Report when deferred access or unavailable values prevent provider inlining.
@@ -33,7 +34,7 @@ Changelog
 - **[IR]** Prevent dynamic graph class name collisions when a generic binding container is used with different type arguments. Basically, graphs using `Bindings<Int>` and `Bindings<Long>` can coexist in the same file.
 - **[IR]** Avoid generated dynamic graph name collisions across sibling files.
 - **[IR]** Keep all transitively included binding containers when multiple graphs enter the same include cycle from different containers. Basically, improve compiler caching when containers are used in multiple graphs.
-- **[IR]** Resolve graph-extension bindings before running parallel graph analysis. This keeps compiler lookups and cache writes on one thread, including for nested extensions and bindings loaded from dependencies.
+- **[IR]** Resolve graph extension bindings before running parallel graph analysis. This keeps compiler lookups and cache writes on one thread, including for nested extensions and bindings loaded from dependencies.
 - **[IR]** Report required dependencies when an earlier parameter has a default value for the same missing type.
 - **[IR]** Fix a runtime crash when an assisted-injected class with no assisted parameters is used across modules with IR class generation.
 - **[IR]** Restore primitive and string inline provider values from dependency metadata.
@@ -55,7 +56,10 @@ Changelog
 ### Changes
 
 - **[IR]** Annotation default matching is limited for KLIB dependencies on Kotlin `2.3.0` and `2.3.10`. We recommend upgrading to Kotlin `2.3.20` or newer.
+- Build against Kotlin `2.4.20`. Note the runtime artifacts still target Kotlin `2.3.0` and Metro supports a wide range of compiler versions. See the [compatibility docs](https://zacsweers.github.io/metro/latest/compatibility/) for a full table of compatible versions.
 - Update embedded Okio dependency to `3.18.2`.
+- Raise Kotlin `2.5.0` support to `2.5.0-dev-4967` for IntelliJ 2026.3 EAPs. This replaces the `2.5.0-dev-498` and `2.5.0-dev-3513` compat modules.
+- Test Kotlin `2.5.0-dev-6460`.
 - Test Kotlin `2.4.20`.
 - Test Kotlin `2.4.20-RC2`.
 - Test Kotlin `2.4.20-RC3`.
@@ -71,6 +75,8 @@ Special thanks to the following contributors for contributing to this release!
 - [@AlexVanyo](https://github.com/AlexVanyo)
 - [@grandstaish](https://github.com/grandstaish)
 - [@kevinguitar](https://github.com/kevinguitar)
+
+### [Consider sponsoring Metro's development](https://www.zacsweers.dev/sponsoring-metro/)
 
 1.4.2
 -----
@@ -101,6 +107,8 @@ Special thanks to the following contributors for contributing to this release!
 - [@erawhctim](https://github.com/erawhctim)
 - [@eygraber](https://github.com/eygraber)
 - [@grandstaish](https://github.com/grandstaish)
+
+### [Consider sponsoring Metro's development](https://www.zacsweers.dev/sponsoring-metro/)
 
 1.4.1
 -----

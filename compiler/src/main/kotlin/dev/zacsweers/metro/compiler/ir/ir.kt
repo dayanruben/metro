@@ -63,6 +63,7 @@ import org.jetbrains.kotlin.ir.builders.IrBlockBodyBuilder
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.IrGeneratorContext
 import org.jetbrains.kotlin.ir.builders.IrStatementsBuilder
+import org.jetbrains.kotlin.ir.builders.declarations.addConstructor
 import org.jetbrains.kotlin.ir.builders.declarations.addField
 import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
@@ -2611,6 +2612,19 @@ internal fun IrConstructorCall.anvilIgnoreQualifier(): Boolean {
 internal fun IrConstructorCall.isKiaIntoMultibinding(): Boolean =
   getConstBooleanArgumentOrNull(Symbols.Names.multibinding) ?: false
 
+context(context: IrPluginContext)
+internal fun IrClass.addDefaultConstructor(): IrConstructor {
+  val owner = this
+  return addConstructor {
+    startOffset = owner.startOffset
+    endOffset = owner.endOffset
+    origin = owner.origin
+    visibility = DescriptorVisibilities.PUBLIC
+    isPrimary = true
+  }
+    .apply { body = generateDefaultConstructorBody() }
+}
+
 // public for test extension use
 context(context: IrPluginContext)
 public fun IrConstructor.generateDefaultConstructorBody(
@@ -2953,3 +2967,9 @@ internal fun IrFunction.canBeInlined(): Boolean {
     else -> false
   }
 }
+
+// Copied from kotlinc because the original is deprecated
+fun DescriptorVisibility.isVisibleOutside() =
+  this != DescriptorVisibilities.PRIVATE &&
+    this != DescriptorVisibilities.PRIVATE_TO_THIS &&
+    this != DescriptorVisibilities.INVISIBLE_FAKE
