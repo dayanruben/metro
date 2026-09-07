@@ -12,6 +12,7 @@ Changelog
 - **[IR]** Reuse completed member-injector lookups for classes without injectable members.
 - **[IR]** Support suspend providers with switching providers.
 - **[IR]** Avoid revisiting shared supertypes when resolving generic bindings through diamond inheritance.
+- **[IR]** Reduce per-entry memory overhead in more long-lived graph and contribution caches by using scatter maps.
 - **[IR]** Reduce repeated work when validating suspend multibindings and reporting suspend-binding errors. Error traces now use cached, deterministic shortest paths to a suspend binding.
 - **[IR]** Reduce repeated dependency scans when checking cycles in graphs with large multibindings.
 - **[IR]** Avoid initializing the rich terminal renderer for plain compiler diagnostics.
@@ -32,6 +33,7 @@ Changelog
 - **[IR]** Prevent dynamic graph class name collisions when a generic binding container is used with different type arguments. Basically, graphs using `Bindings<Int>` and `Bindings<Long>` can coexist in the same file.
 - **[IR]** Avoid generated dynamic graph name collisions across sibling files.
 - **[IR]** Keep all transitively included binding containers when multiple graphs enter the same include cycle from different containers. Basically, improve compiler caching when containers are used in multiple graphs.
+- **[IR]** Resolve graph-extension bindings before running parallel graph analysis. This keeps compiler lookups and cache writes on one thread, including for nested extensions and bindings loaded from dependencies.
 - **[IR]** Report required dependencies when an earlier parameter has a default value for the same missing type.
 - **[IR]** Fix a runtime crash when an assisted-injected class with no assisted parameters is used across modules with IR class generation.
 - **[IR]** Restore primitive and string inline provider values from dependency metadata.
