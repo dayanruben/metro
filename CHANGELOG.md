@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+1.4.3
+-----
+
+_2026-09-08_
+
 ### Enhancements
 
 - **[FIR]** Warn when a `@ContributesTo` interface only exposes bindings and recommend making it a binding container with `@BindingContainer`. The latter is preferable as it reduces generated code.
