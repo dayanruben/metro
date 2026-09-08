@@ -6,7 +6,7 @@ Changelog
 
 ### Enhancements
 
-- **[FIR]** Warn when a `@ContributesTo` interface only exposes bindings and recommend making it a binding container with `@BindingContainer`.
+- **[FIR]** Warn when a `@ContributesTo` interface only exposes bindings and recommend making it a binding container with `@BindingContainer`. The latter is preferable as it reduces generated code.
 - **[FIR]** Warn about array class literals in qualifiers, map keys, and scopes that kotlinc can confuse across modules. For example, `Array<IntArray>::class` can be read as `IntArray::class`.
 - **[FIR/IR]** Support `priority` on `@ContributesBinding` and `@ContributesIntoMap`, allowing higher-priority contributions to replace conflicting bindings or map entries without directly referencing the lower-priority implementation.
 - **[IR]** Reuse completed member-injector lookups for classes without injectable members.
