@@ -1,12 +1,18 @@
 {
-  "graph": "parity.core.AppGraph",
+  "graph": "AppGraph",
   "scopes": [],
   "aggregationScopes": [],
   "roots": {
     "accessors": [
       {
-        "key": "parity.core.Consumer",
-        "name": "consumer",
+        "key": "kotlin.collections.Set<kotlin.String>",
+        "name": "names",
+        "isProperty": false,
+        "isDeferrable": false
+      },
+      {
+        "key": "kotlin.collections.Set<ValueFactory>",
+        "name": "factories",
         "isProperty": true,
         "isDeferrable": false
       }
@@ -14,7 +20,13 @@
     "injectors": []
   },
   "extensions": {
-    "accessors": [],
+    "accessors": [
+      {
+        "key": "ChildGraph",
+        "name": "child",
+        "isProperty": true
+      }
+    ],
     "factoryAccessors": [],
     "factoriesImplemented": []
   },
@@ -82,7 +94,7 @@
     "enableProviderInlining": true,
     "enableFunctionProviders": true,
     "enableSuspendProviders": false,
-    "desugaredProviderSeverity": "NONE",
+    "desugaredProviderSeverity": "WARN",
     "enableKClassToClassInterop": false,
     "generateContributionProviders": false,
     "enableCircuitCodegen": false,
@@ -95,29 +107,29 @@
   },
   "stats": {
     "providerFactories": 2,
-    "bindsCallables": 1,
-    "multibindsCallables": 0,
+    "bindsCallables": 0,
+    "multibindsCallables": 2,
     "optionalBindings": 0,
-    "accessors": 1,
+    "accessors": 2,
     "injectors": 0,
-    "graphExtensionAccessors": 0,
+    "graphExtensionAccessors": 1,
     "graphExtensionFactories": 0,
     "includedGraphs": 0,
     "bindingContainers": 0,
     "dynamicBindings": 0,
     "graphPrivateKeys": 0,
     "publishedBindsKeys": 0,
-    "populatedKeys": 6,
-    "validatedKeys": 6,
-    "reachableKeys": 6,
+    "populatedKeys": 7,
+    "validatedKeys": 7,
+    "reachableKeys": 7,
     "deferredKeys": 0,
     "unusedInputs": 0,
-    "providerProperties": 1,
+    "providerProperties": 2,
     "scopedProviderProperties": 0,
     "shards": 0,
     "optimizations": {
       "bindingsPrunedByShrinking": 0,
-      "classConstructorDirectInvocations": 2,
+      "classConstructorDirectInvocations": 0,
       "classConstructorNewInstanceCalls": 0,
       "providerDirectInvocations": 1,
       "providerNewInstanceCalls": 0,
@@ -133,7 +145,21 @@
   },
   "bindings": [
     {
-      "key": "@dev.zacsweers.metro.Named(\"base\") kotlin.String",
+      "key": "@dev.zacsweers.metro.internal.MultibindingElement(\"ValueFactory\", \"610231206\") ValueFactory",
+      "bindingKind": "Provided",
+      "isScoped": false,
+      "nameHint": "factory",
+      "dependencies": [
+        {
+          "key": "ValueFactory",
+          "hasDefault": false
+        }
+      ],
+      "isSynthetic": false,
+      "declaration": "factory"
+    },
+    {
+      "key": "@dev.zacsweers.metro.internal.MultibindingElement(\"kotlin.String\", \"-1409686752\") kotlin.String",
       "bindingKind": "Provided",
       "isScoped": false,
       "nameHint": "name",
@@ -142,118 +168,118 @@
       "declaration": "name"
     },
     {
-      "key": "parity.core.Api",
-      "bindingKind": "Alias",
+      "key": "AppGraph",
+      "bindingKind": "BoundInstance",
       "isScoped": false,
-      "nameHint": "bindApi",
-      "dependencies": [
-        {
-          "key": "parity.core.RealApi",
-          "hasDefault": false
-        }
-      ],
-      "isSynthetic": false,
-      "declaration": "bindApi",
-      "aliasTarget": "parity.core.RealApi"
-    },
-    {
-      "key": "parity.core.Consumer",
-      "bindingKind": "ConstructorInjected",
-      "isScoped": false,
-      "nameHint": "Consumer",
-      "dependencies": [
-        {
-          "key": "parity.core.Api",
-          "hasDefault": false
-        },
-        {
-          "key": "@dev.zacsweers.metro.Named(\"base\") kotlin.String",
-          "hasDefault": false
-        },
-        {
-          "key": "Provider<parity.core.Engine>",
-          "hasDefault": false,
-          "wrapperType": "Provider"
-        },
-        {
-          "key": "Lazy<parity.core.Engine>",
-          "hasDefault": false,
-          "wrapperType": "Lazy"
-        },
-        {
-          "key": "parity.core.OptionalValue",
-          "hasDefault": false
-        }
-      ],
-      "isSynthetic": false,
-      "declaration": "Consumer"
-    },
-    {
-      "key": "parity.core.Engine",
-      "bindingKind": "ConstructorInjected",
-      "isScoped": false,
-      "nameHint": "Engine",
+      "nameHint": "AppGraphProvider",
+      "isGraphInput": false,
       "dependencies": [],
       "isSynthetic": false,
-      "declaration": "Engine"
+      "declaration": "AppGraph"
     },
     {
-      "key": "parity.core.OptionalValue",
-      "bindingKind": "Provided",
+      "key": "ChildGraph",
+      "bindingKind": "GraphExtension",
       "isScoped": false,
-      "nameHint": "optionalValue",
+      "nameHint": "ChildGraph",
       "dependencies": [
         {
-          "key": "parity.core.MissingDependency? = ...",
-          "hasDefault": true
-        }
-      ],
-      "isSynthetic": false,
-      "declaration": "optionalValue"
-    },
-    {
-      "key": "parity.core.RealApi",
-      "bindingKind": "ConstructorInjected",
-      "isScoped": false,
-      "nameHint": "RealApi",
-      "dependencies": [
-        {
-          "key": "parity.core.Engine",
+          "key": "AppGraph",
           "hasDefault": false
         }
       ],
       "isSynthetic": false,
-      "declaration": "RealApi"
+      "declaration": "<get-child>"
+    },
+    {
+      "key": "ValueFactory",
+      "bindingKind": "AssistedFactory",
+      "isScoped": false,
+      "nameHint": "ValueFactory",
+      "dependencies": [],
+      "isSynthetic": false,
+      "declaration": "ValueFactory",
+      "assistedTarget": {
+        "key": "Value",
+        "bindingKind": "ConstructorInjected",
+        "isScoped": false,
+        "nameHint": "Value",
+        "dependencies": [],
+        "isSynthetic": false,
+        "declaration": "Value",
+        "assistedParameters": [
+          {
+            "key": "kotlin.String",
+            "name": "name"
+          }
+        ]
+      }
+    },
+    {
+      "key": "kotlin.collections.Set<ValueFactory>",
+      "bindingKind": "Multibinding",
+      "isScoped": false,
+      "nameHint": "setOfValueFactory",
+      "dependencies": [
+        {
+          "key": "@dev.zacsweers.metro.internal.MultibindingElement(\"ValueFactory\", \"610231206\") ValueFactory",
+          "hasDefault": false
+        }
+      ],
+      "isSynthetic": false,
+      "multibinding": {
+        "type": "SET",
+        "allowEmpty": false,
+        "sources": [
+          "@dev.zacsweers.metro.internal.MultibindingElement(\"ValueFactory\", \"610231206\") ValueFactory"
+        ]
+      }
+    },
+    {
+      "key": "kotlin.collections.Set<kotlin.String>",
+      "bindingKind": "Multibinding",
+      "isScoped": false,
+      "nameHint": "setOfString",
+      "dependencies": [
+        {
+          "key": "@dev.zacsweers.metro.internal.MultibindingElement(\"kotlin.String\", \"-1409686752\") kotlin.String",
+          "hasDefault": false
+        }
+      ],
+      "isSynthetic": false,
+      "multibinding": {
+        "type": "SET",
+        "allowEmpty": false,
+        "sources": [
+          "@dev.zacsweers.metro.internal.MultibindingElement(\"kotlin.String\", \"-1409686752\") kotlin.String"
+        ]
+      }
     }
   ],
   "bindingExplanations": [
     {
       "context": {
-        "id": "20:parity.core.AppGraph",
-        "label": "parity.core.AppGraph"
+        "id": "8:AppGraph",
+        "label": "AppGraph"
       },
       "phase": "lookup",
       "outcome": "selected",
       "candidates": [
         {
-          "id": "48:@dev.zacsweers.metro.Named(\"base\") kotlin.String|90:parity.core.CoreBindings.Companion.name(parity.core.CoreBindings.Companion): kotlin.String",
-          "key": "@dev.zacsweers.metro.Named(\"base\") kotlin.String",
+          "id": "91:@dev.zacsweers.metro.internal.MultibindingElement(\"ValueFactory\", \"610231206\") ValueFactory|73:AppGraph.Companion.factory(AppGraph.Companion,ValueFactory): ValueFactory",
+          "key": "@dev.zacsweers.metro.internal.MultibindingElement(\"ValueFactory\", \"610231206\") ValueFactory",
           "status": "selected",
           "reason": "selected_explicit",
           "declaration": {
-            "id": "parity.core.CoreBindings.Companion.name(parity.core.CoreBindings.Companion): kotlin.String",
-            "label": "parity.core.CoreBindings.Companion.name"
+            "id": "AppGraph.Companion.factory(AppGraph.Companion,ValueFactory): ValueFactory",
+            "label": "AppGraph.Companion.factory"
           },
           "relatedDeclarations": [],
           "details": []
         }
       ],
       "request": {
-        "key": "@dev.zacsweers.metro.Named(\"base\") kotlin.String",
-        "declaration": {
-          "id": "parity.core.Consumer.MetroFactory.declarationMirror(parity.core.Consumer.MetroFactory,parity.core.Api,kotlin.String,dev.zacsweers.metro.Provider<parity.core.Engine>,kotlin.Lazy<parity.core.Engine>,parity.core.OptionalValue): parity.core.Consumer#name",
-          "label": "parity.core.Consumer.MetroFactory.declarationMirror.name"
-        },
+        "key": "@dev.zacsweers.metro.internal.MultibindingElement(\"ValueFactory\", \"610231206\") ValueFactory",
         "hasDefault": false,
         "isOptional": false
       },
@@ -263,98 +289,90 @@
     },
     {
       "context": {
-        "id": "20:parity.core.AppGraph",
-        "label": "parity.core.AppGraph"
+        "id": "8:AppGraph",
+        "label": "AppGraph"
       },
       "phase": "lookup",
       "outcome": "selected",
       "candidates": [
         {
-          "id": "18:parity.core.Engine|18:parity.core.Engine",
-          "key": "parity.core.Engine",
-          "status": "selected",
-          "reason": "selected_implicit",
-          "declaration": {
-            "id": "parity.core.Engine",
-            "label": "parity.core.Engine"
-          },
-          "relatedDeclarations": [],
-          "details": []
-        }
-      ],
-      "request": {
-        "key": "Lazy<parity.core.Engine>",
-        "declaration": {
-          "id": "parity.core.Consumer.MetroFactory.declarationMirror(parity.core.Consumer.MetroFactory,parity.core.Api,kotlin.String,dev.zacsweers.metro.Provider<parity.core.Engine>,kotlin.Lazy<parity.core.Engine>,parity.core.OptionalValue): parity.core.Consumer#engineLazy",
-          "label": "parity.core.Consumer.MetroFactory.declarationMirror.engineLazy"
-        },
-        "hasDefault": false,
-        "isOptional": false
-      },
-      "details": [
-        "Records the candidates reached by this lookup; later fallbacks remain unevaluated."
-      ]
-    },
-    {
-      "context": {
-        "id": "20:parity.core.AppGraph",
-        "label": "parity.core.AppGraph"
-      },
-      "phase": "lookup",
-      "outcome": "selected",
-      "candidates": [
-        {
-          "id": "18:parity.core.Engine|18:parity.core.Engine",
-          "key": "parity.core.Engine",
-          "status": "selected",
-          "reason": "selected_implicit",
-          "declaration": {
-            "id": "parity.core.Engine",
-            "label": "parity.core.Engine"
-          },
-          "relatedDeclarations": [],
-          "details": []
-        }
-      ],
-      "request": {
-        "key": "Provider<parity.core.Engine>",
-        "declaration": {
-          "id": "parity.core.Consumer.MetroFactory.declarationMirror(parity.core.Consumer.MetroFactory,parity.core.Api,kotlin.String,dev.zacsweers.metro.Provider<parity.core.Engine>,kotlin.Lazy<parity.core.Engine>,parity.core.OptionalValue): parity.core.Consumer#engineProvider",
-          "label": "parity.core.Consumer.MetroFactory.declarationMirror.engineProvider"
-        },
-        "hasDefault": false,
-        "isOptional": false
-      },
-      "details": [
-        "Records the candidates reached by this lookup; later fallbacks remain unevaluated."
-      ]
-    },
-    {
-      "context": {
-        "id": "20:parity.core.AppGraph",
-        "label": "parity.core.AppGraph"
-      },
-      "phase": "lookup",
-      "outcome": "selected",
-      "candidates": [
-        {
-          "id": "15:parity.core.Api|95:parity.core.CoreBindings.bindApi(parity.core.CoreBindings,parity.core.RealApi): parity.core.Api",
-          "key": "parity.core.Api",
+          "id": "95:@dev.zacsweers.metro.internal.MultibindingElement(\"kotlin.String\", \"-1409686752\") kotlin.String|58:AppGraph.Companion.name(AppGraph.Companion): kotlin.String",
+          "key": "@dev.zacsweers.metro.internal.MultibindingElement(\"kotlin.String\", \"-1409686752\") kotlin.String",
           "status": "selected",
           "reason": "selected_explicit",
           "declaration": {
-            "id": "parity.core.CoreBindings.bindApi(parity.core.CoreBindings,parity.core.RealApi): parity.core.Api",
-            "label": "parity.core.CoreBindings.bindApi"
+            "id": "AppGraph.Companion.name(AppGraph.Companion): kotlin.String",
+            "label": "AppGraph.Companion.name"
           },
           "relatedDeclarations": [],
           "details": []
         }
       ],
       "request": {
-        "key": "parity.core.Api",
+        "key": "@dev.zacsweers.metro.internal.MultibindingElement(\"kotlin.String\", \"-1409686752\") kotlin.String",
+        "hasDefault": false,
+        "isOptional": false
+      },
+      "details": [
+        "Records the candidates reached by this lookup; later fallbacks remain unevaluated."
+      ]
+    },
+    {
+      "context": {
+        "id": "8:AppGraph",
+        "label": "AppGraph"
+      },
+      "phase": "lookup",
+      "outcome": "selected",
+      "candidates": [
+        {
+          "id": "8:AppGraph|8:AppGraph",
+          "key": "AppGraph",
+          "status": "selected",
+          "reason": "selected_generated",
+          "declaration": {
+            "id": "AppGraph",
+            "label": "AppGraph"
+          },
+          "relatedDeclarations": [],
+          "details": []
+        }
+      ],
+      "request": {
+        "key": "AppGraph",
+        "hasDefault": false,
+        "isOptional": false
+      },
+      "details": [
+        "Records the candidates reached by this lookup; later fallbacks remain unevaluated."
+      ]
+    },
+    {
+      "context": {
+        "id": "8:AppGraph",
+        "label": "AppGraph"
+      },
+      "phase": "lookup",
+      "outcome": "selected",
+      "candidates": [
+        {
+          "id": "8:AppGraph|8:AppGraph",
+          "key": "AppGraph",
+          "status": "selected",
+          "reason": "selected_generated",
+          "declaration": {
+            "id": "AppGraph",
+            "label": "AppGraph"
+          },
+          "relatedDeclarations": [],
+          "details": []
+        }
+      ],
+      "request": {
+        "key": "AppGraph",
         "declaration": {
-          "id": "parity.core.Consumer.MetroFactory.declarationMirror(parity.core.Consumer.MetroFactory,parity.core.Api,kotlin.String,dev.zacsweers.metro.Provider<parity.core.Engine>,kotlin.Lazy<parity.core.Engine>,parity.core.OptionalValue): parity.core.Consumer#api",
-          "label": "parity.core.Consumer.MetroFactory.declarationMirror.api"
+          "id": "AppGraph.Impl.<get-child>(AppGraph.Impl): ChildGraph",
+          "label": "AppGraph.Impl.<get-child>"
         },
         "hasDefault": false,
         "isOptional": false
@@ -365,27 +383,65 @@
     },
     {
       "context": {
-        "id": "20:parity.core.AppGraph",
-        "label": "parity.core.AppGraph"
+        "id": "8:AppGraph",
+        "label": "AppGraph"
       },
       "phase": "lookup",
       "outcome": "selected",
       "candidates": [
         {
-          "id": "20:parity.core.Consumer|20:parity.core.Consumer",
-          "key": "parity.core.Consumer",
+          "id": "10:ChildGraph|52:AppGraph.Impl.<get-child>(AppGraph.Impl): ChildGraph",
+          "key": "ChildGraph",
+          "status": "selected",
+          "reason": "selected_generated",
+          "declaration": {
+            "id": "AppGraph.Impl.<get-child>(AppGraph.Impl): ChildGraph",
+            "label": "AppGraph.Impl.<get-child>"
+          },
+          "relatedDeclarations": [],
+          "details": []
+        }
+      ],
+      "request": {
+        "key": "ChildGraph",
+        "declaration": {
+          "id": "AppGraph.Impl.<get-child>(AppGraph.Impl): ChildGraph",
+          "label": "AppGraph.Impl.<get-child>"
+        },
+        "hasDefault": false,
+        "isOptional": false
+      },
+      "details": [
+        "Records the candidates reached by this lookup; later fallbacks remain unevaluated."
+      ]
+    },
+    {
+      "context": {
+        "id": "8:AppGraph",
+        "label": "AppGraph"
+      },
+      "phase": "lookup",
+      "outcome": "selected",
+      "candidates": [
+        {
+          "id": "12:ValueFactory|12:ValueFactory",
+          "key": "ValueFactory",
           "status": "selected",
           "reason": "selected_implicit",
           "declaration": {
-            "id": "parity.core.Consumer",
-            "label": "parity.core.Consumer"
+            "id": "ValueFactory",
+            "label": "ValueFactory"
           },
           "relatedDeclarations": [],
           "details": []
         }
       ],
       "request": {
-        "key": "parity.core.Consumer",
+        "key": "ValueFactory",
+        "declaration": {
+          "id": "AppGraph.Companion.factory(AppGraph.Companion,ValueFactory): ValueFactory#factory",
+          "label": "AppGraph.Companion.factory.factory"
+        },
         "hasDefault": false,
         "isOptional": false
       },
@@ -395,31 +451,23 @@
     },
     {
       "context": {
-        "id": "20:parity.core.AppGraph",
-        "label": "parity.core.AppGraph"
+        "id": "8:AppGraph",
+        "label": "AppGraph"
       },
       "phase": "lookup",
       "outcome": "selected",
       "candidates": [
         {
-          "id": "18:parity.core.Engine|18:parity.core.Engine",
-          "key": "parity.core.Engine",
+          "id": "36:kotlin.collections.Set<ValueFactory>|9:generated",
+          "key": "kotlin.collections.Set<ValueFactory>",
           "status": "selected",
-          "reason": "selected_implicit",
-          "declaration": {
-            "id": "parity.core.Engine",
-            "label": "parity.core.Engine"
-          },
+          "reason": "selected_multibinding",
           "relatedDeclarations": [],
           "details": []
         }
       ],
       "request": {
-        "key": "parity.core.Engine",
-        "declaration": {
-          "id": "parity.core.RealApi.MetroFactory.declarationMirror(parity.core.RealApi.MetroFactory,parity.core.Engine): parity.core.RealApi#engine",
-          "label": "parity.core.RealApi.MetroFactory.declarationMirror.engine"
-        },
+        "key": "kotlin.collections.Set<ValueFactory>",
         "hasDefault": false,
         "isOptional": false
       },
@@ -429,52 +477,23 @@
     },
     {
       "context": {
-        "id": "20:parity.core.AppGraph",
-        "label": "parity.core.AppGraph"
-      },
-      "phase": "lookup",
-      "outcome": "missing",
-      "candidates": [],
-      "request": {
-        "key": "parity.core.MissingDependency? = ...",
-        "declaration": {
-          "id": "parity.core.CoreBindings.Companion.optionalValue(parity.core.CoreBindings.Companion,parity.core.MissingDependency?): parity.core.OptionalValue#missing",
-          "label": "parity.core.CoreBindings.Companion.optionalValue.missing"
-        },
-        "hasDefault": true,
-        "isOptional": true
-      },
-      "details": [
-        "Records the candidates reached by this lookup; later fallbacks remain unevaluated."
-      ]
-    },
-    {
-      "context": {
-        "id": "20:parity.core.AppGraph",
-        "label": "parity.core.AppGraph"
+        "id": "8:AppGraph",
+        "label": "AppGraph"
       },
       "phase": "lookup",
       "outcome": "selected",
       "candidates": [
         {
-          "id": "25:parity.core.OptionalValue|142:parity.core.CoreBindings.Companion.optionalValue(parity.core.CoreBindings.Companion,parity.core.MissingDependency?): parity.core.OptionalValue",
-          "key": "parity.core.OptionalValue",
+          "id": "37:kotlin.collections.Set<kotlin.String>|9:generated",
+          "key": "kotlin.collections.Set<kotlin.String>",
           "status": "selected",
-          "reason": "selected_explicit",
-          "declaration": {
-            "id": "parity.core.CoreBindings.Companion.optionalValue(parity.core.CoreBindings.Companion,parity.core.MissingDependency?): parity.core.OptionalValue",
-            "label": "parity.core.CoreBindings.Companion.optionalValue"
-          },
+          "reason": "selected_multibinding",
           "relatedDeclarations": [],
           "details": []
         }
       ],
       "request": {
-        "key": "parity.core.OptionalValue",
-        "declaration": {
-          "id": "parity.core.Consumer.MetroFactory.declarationMirror(parity.core.Consumer.MetroFactory,parity.core.Api,kotlin.String,dev.zacsweers.metro.Provider<parity.core.Engine>,kotlin.Lazy<parity.core.Engine>,parity.core.OptionalValue): parity.core.Consumer#optionalValue",
-          "label": "parity.core.Consumer.MetroFactory.declarationMirror.optionalValue"
-        },
+        "key": "kotlin.collections.Set<kotlin.String>",
         "hasDefault": false,
         "isOptional": false
       },
@@ -484,36 +503,27 @@
     },
     {
       "context": {
-        "id": "20:parity.core.AppGraph",
-        "label": "parity.core.AppGraph"
+        "id": "8:AppGraph",
+        "label": "AppGraph"
       },
-      "phase": "lookup",
+      "phase": "registration",
       "outcome": "selected",
       "candidates": [
         {
-          "id": "19:parity.core.RealApi|19:parity.core.RealApi",
-          "key": "parity.core.RealApi",
+          "id": "10:ChildGraph|52:AppGraph.Impl.<get-child>(AppGraph.Impl): ChildGraph",
+          "key": "ChildGraph",
           "status": "selected",
-          "reason": "selected_implicit",
+          "reason": "selected_generated",
           "declaration": {
-            "id": "parity.core.RealApi",
-            "label": "parity.core.RealApi"
+            "id": "AppGraph.Impl.<get-child>(AppGraph.Impl): ChildGraph",
+            "label": "AppGraph.Impl.<get-child>"
           },
           "relatedDeclarations": [],
           "details": []
         }
       ],
-      "request": {
-        "key": "parity.core.RealApi",
-        "declaration": {
-          "id": "parity.core.CoreBindings.bindApi(parity.core.CoreBindings,parity.core.RealApi): parity.core.Api#impl",
-          "label": "parity.core.CoreBindings.bindApi.impl"
-        },
-        "hasDefault": false,
-        "isOptional": false
-      },
       "details": [
-        "Records the candidates reached by this lookup; later fallbacks remain unevaluated."
+        "Records bindings added directly to this graph, including member-injection dependencies."
       ]
     }
   ]
