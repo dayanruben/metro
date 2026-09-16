@@ -33,10 +33,6 @@ Special thanks to the following contributors for contributing to this release!
 1.4.3
 -----
 
-### Fixes
-
-- **[FIR]** Avoid duplicate BindsMirror constructor generation across FIR generators.
-
 _2026-09-08_
 
 ### Enhancements
@@ -58,6 +54,7 @@ _2026-09-08_
 
 ### Fixes
 
+- **[FIR]** Avoid duplicate BindsMirror constructor generation across FIR generators.
 - **[FIR]** Fix a compiler crash when using typealiases as contribution scopes.
 - **[FIR]** Fix a compiler crash on zero-parameter member-injection functions.
 - **[FIR]** Fix graphs accidentally implementing binding-container interfaces when contributions use different scopes. Basically, checking another scope won't turn a container that supplies bindings into an interface the graph implements.
