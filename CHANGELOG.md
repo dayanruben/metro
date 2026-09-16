@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+1.4.4
+-----
+
+_2026-09-16_
+
 ### Enhancements
 
 - **[IR]** Reduce repeated work when reporting dependency cycles.
