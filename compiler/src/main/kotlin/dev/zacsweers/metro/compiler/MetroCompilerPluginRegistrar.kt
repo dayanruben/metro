@@ -24,18 +24,6 @@ import org.jetbrains.kotlin.incremental.components.ExpectActualTracker
 
 public class MetroCompilerPluginRegistrar : CompilerPluginRegistrar() {
 
-  private companion object {
-    val isIde by lazy {
-      try {
-        // Try to look up an IntelliJ-only class
-        Class.forName("org.jetbrains.kotlin.analysis.low.level.api.fir.sessions.LLFirSession")
-        true
-      } catch (_: ClassNotFoundException) {
-        false
-      }
-    }
-  }
-
   public override val pluginId: String = PLUGIN_ID
 
   override val supportsK2: Boolean
@@ -67,6 +55,8 @@ public class MetroCompilerPluginRegistrar : CompilerPluginRegistrar() {
               return
             }
         }
+
+    val isIde = configuration.isIdeMode(version)
 
     val options = MetroOptions.load(configuration, version, isIde)
     val enableFir = version != null || (isIde && options.forceEnableFirInIde)
