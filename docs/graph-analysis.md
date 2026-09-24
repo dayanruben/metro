@@ -47,40 +47,64 @@ The counters are available in per-graph and aggregated metadata.
 !!! warning
     These tasks are intended for analysis and visualization. They aren't intended for continuous validation because of the `reportsDestination` limitations described above.
 
-### `generateMetroGraphMetadata`
+The global `generateMetroGraphMetadata`, `analyzeMetroGraph`, and `generateMetroGraphHtml` tasks run their corresponding report tasks for every Kotlin compilation in the project.
 
-Combines the compiler's per-graph metadata into one JSON file for the current Gradle project.
+To target one compilation, use a scoped task name. It includes the capitalized target and compilation names. A blank target name is omitted. Running a scoped report task compiles its selected compilation and the dependencies that compilation needs.
 
-**Output:** `build/reports/metro/graphMetadata.json`
+| Compilation                          | Metadata task                             | Output directory                     |
+|--------------------------------------|-------------------------------------------|--------------------------------------|
+| Android `internalDebug`              | `generateInternalDebugMetroGraphMetadata` | `build/reports/metro/internalDebug/` |
+| JVM `main`                           | `generateMainMetroGraphMetadata`          | `build/reports/metro/main/`          |
+| KMP `jvm` target, `main` compilation | `generateJvmMainMetroGraphMetadata`       | `build/reports/metro/jvm/main/`      |
 
-The compiler writes individual reports under `{reportsDestination}/{target}/{compilation}/graph-metadata/`. The target directory is omitted when the target has no name. The analysis and HTML tasks depend on this task. You usually don't need to run it directly.
+Outputs use `build/reports/metro/{target}/{compilation}/`. The target directory is omitted when the target has no name. Each compilation has its own metadata, analysis, and HTML reports.
 
-### `analyzeMetroGraph`
+### `generate<Target><Compilation>MetroGraphMetadata`
 
-Combines graph metadata into an analysis report.
+Combines the compiler's per-graph metadata from the selected compilation into one JSON file.
 
 ```bash
-./gradlew :app:analyzeMetroGraph
+./gradlew :app:generateInternalDebugMetroGraphMetadata
 ```
 
-**Output:** `build/reports/metro/analysis.json`
+**Output:** `build/reports/metro/internalDebug/graphMetadata.json`
+
+The compiler writes individual reports under `{reportsDestination}/{target}/{compilation}/graph-metadata/`. The analysis and HTML tasks depend on the metadata task for the same compilation. You usually don't need to run it directly.
+
+### `analyze<Target><Compilation>MetroGraph`
+
+Combines graph metadata from the selected compilation into an analysis report.
+
+```bash
+./gradlew :app:analyzeInternalDebugMetroGraph
+```
+
+**Output:** `build/reports/metro/internalDebug/analysis.json`
 
 This task analyzes the combined graph metadata. You can use its JSON output in other tools.
 
-### `generateMetroGraphHtml`
+### `generate<Target><Compilation>MetroGraphHtml`
 
 Generates interactive HTML visualizations of your dependency graphs. Each file includes the graph data, styles, and scripts.
 
 ```bash
-./gradlew :app:generateMetroGraphHtml
+./gradlew :app:generateInternalDebugMetroGraphHtml
 ```
 
-**Output:** `build/reports/metro/html/` containing:
+**Output:** `build/reports/metro/internalDebug/html/` containing:
 
 - `index.html` - Lists all graphs
 - `{graph-name}.html` - Interactive visualization for each graph
 
 Open the HTML files directly in a browser. They work offline and have no external dependencies.
+
+### Updating Existing Commands
+
+Existing commands using the global task names remain valid and run all compilations. Use the scoped names above when you want to target one compilation.
+
+Update report readers to use the compilation's output directory. For example, `build/reports/metro/graphMetadata.json` moves to `build/reports/metro/internalDebug/graphMetadata.json` for Android `internalDebug`. Global tasks also write separate reports for each compilation.
+
+The global names now refer to aggregate tasks. Move typed task configuration to a scoped task, such as `tasks.named<GenerateGraphHtmlTask>("generateMainMetroGraphHtml")`. To configure HTML reports for all compilations, use `tasks.withType<GenerateGraphHtmlTask>().configureEach { ... }`. The same applies to `GenerateGraphMetadataTask` and `AnalyzeGraphTask`.
 
 ## Open Reports in the Browser
 
@@ -88,7 +112,7 @@ Open the HTML files directly in a browser. They work offline and have no externa
 
 Files stay in your browser. The viewer doesn't upload or save them. Choose several reports from the same compilation to see extensions, their parents, and included graph dependencies together. Missing related reports are listed above the graph. **Add reports** adds files to the current import. **Replace reports** starts a new import.
 
-Include `analysis.json` to see centrality, dominator counts, and the longest chain. Search, layouts, roots, and connections work without analysis. The viewer checks graph names and binding keys before accepting analysis. Generate both files from the same compilation.
+Include `analysis.json` to see centrality, dominator counts, and the longest chain. Search, layouts, roots, and connections work without analysis. The viewer checks graph names and binding keys before accepting analysis. Import `graphMetadata.json` and `analysis.json` from the same compilation's output directory. Use **Replace reports** when switching variants or targets.
 
 The viewer accepts Metro's current unversioned JSON reports. Use the docs version that matches the Metro version that produced your reports. Older reports may lack accessor names or ownership information. Conflicting reports for the same graph are rejected.
 
@@ -216,11 +240,11 @@ The map uses a fixed layout and draws only the visible area. You can start brows
 ## Example Workflow
 
 ```bash
-# Generate visualizations
-./gradlew :app:generateMetroGraphHtml
+# Generate visualizations for internalDebug
+./gradlew :app:generateInternalDebugMetroGraphHtml
 
 # Open in browser
-open app/build/reports/metro/html/index.html
+open app/build/reports/metro/internalDebug/html/index.html
 ```
 
 1. Open a graph and use the package overview to find the area you want to inspect.
@@ -233,7 +257,7 @@ Each graph's HTML file contains its data and viewer resources. You can open it d
 
 ## Analysis Metrics
 
-The `analyzeMetroGraph` task computes the following metrics for each graph.
+The `analyze<Target><Compilation>MetroGraph` task computes the following metrics for each graph.
 
 ### Fan-In and Fan-Out
 
@@ -290,14 +314,14 @@ Model APIs require opting into `dev.zacsweers.metro.graph.ExperimentalMetroGraph
 
 ### Raw Metadata
 
-The raw graph metadata from `generateMetroGraphMetadata`:
+The raw graph metadata from `generateInternalDebugMetroGraphMetadata`:
 
 ```kotlin
 @file:OptIn(dev.zacsweers.metro.graph.ExperimentalMetroGraphApi::class)
 
 // Parse raw graph metadata
 val metadata = Json.decodeFromString<AggregatedGraphMetadata>(
-    file("build/reports/metro/graphMetadata.json").readText()
+    file("build/reports/metro/internalDebug/graphMetadata.json").readText()
 )
 
 // Analyze bindings
@@ -335,14 +359,14 @@ The raw metadata includes:
 
 ### Analysis Report
 
-The `analyzeMetroGraph` report groups its results by graph:
+The `analyzeInternalDebugMetroGraph` report groups its results by graph:
 
 ```kotlin
 @file:OptIn(dev.zacsweers.metro.graph.ExperimentalMetroGraphApi::class)
 
 // Parse analysis report
 val report = Json.decodeFromString<FullAnalysisReport>(
-    file("build/reports/metro/analysis.json").readText()
+    file("build/reports/metro/internalDebug/analysis.json").readText()
 )
 
 // Each graph has all its analysis co-located
