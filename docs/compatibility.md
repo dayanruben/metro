@@ -97,6 +97,7 @@ The following Kotlin versions are tested via CI:
 |-----------------|
 | 2.5.0-dev-7307  |
 | 2.5.0-dev-6460  |
+| 2.5.0-Beta1     |
 | 2.4.20-dev-6138 |
 | 2.4.20          |
 | 2.4.10          |

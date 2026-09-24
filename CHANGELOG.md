@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+1.4.5
+-----
+
+_2026-09-24_
+
 ### Fixes
 
 - **[FIR]** Treat `@Multibinds` declarations as accessors to fix a false positive `CONTRIBUTES_TO_COULD_BE_BINDING_CONTAINER` warning.
