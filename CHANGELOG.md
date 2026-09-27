@@ -6,16 +6,23 @@ Changelog
 
 ### New
 
+- **[FIR/IC]** Add the `function-inject-annotations-override` compiler option to use dedicated annotations for top-level function injection. See [custom function injection annotations](docs/injection-types.md#custom-function-injection-annotations).
 - **[Gradle]** Add opt-in checks to find Metro contributions hidden from a graph's compile classpath. Run `checkMainMetroHiddenDependencies` (i.e., on CI). It writes a report and fails if it finds hidden contributions.
   - Supports JVM and Android compilations, including JVM targets in KMP. See [checking for hidden contributions](docs/aggregation.md#checking-for-hidden-contributions).
   - Also checks Hilt aggregation metadata when Hilt interop is enabled.
 
 ### Fixes
 
-- **[IR]** Fix member injection across modules when an injected member uses a generic base class's type parameter.
+- **[FIR]** Reduce redundant lookups when discovering contributed graph extension factories.
+- **[FIR/IC]** Avoid unnecessary recompilation of independent injected classes when generating contribution hints.
 - **[FIR/IR/interop]** Fix incremental builds not updating graphs when an upstream Hilt `@AggregatedDeps` marker changes or is removed.
+- **[IR]** Fix member injection across modules when an injected member uses a generic base class's type parameter.
 - **[IR]** Fix missing binding errors for accessors inherited from another module having no source location.
 - **[IR]** Fix `MissingRuntimeCoroutines` errors for injected top-level functions pointing at `0:0` in a generated file. They're now reported on the function.
+
+### Changes
+
+- **[Gradle]** `enableTopLevelFunctionInjection` is **disabled by default** for now on **all** Kotlin versions because it makes incremental builds recompile more files. If you use top-level function injection, enable it with `enableTopLevelFunctionInjection.set(true)` in the `metro` DSL. See [incremental compilation perf docs](docs/performance.md#incremental-compilation).
 
 ### Contributors
 
