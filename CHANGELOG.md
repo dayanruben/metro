@@ -23,6 +23,7 @@ Changelog
 - **[IR]** Fix `MissingRuntimeCoroutines` errors for injected top-level functions pointing at `0:0` in a generated file. They're now reported on the function.
 - **[IR]** Fix declaration parents for copied default argument lambdas and callable references, including references inside generated provider wrappers.
 - **[IR]** Include extension receivers in generated lambda function types, including set and map builder callbacks.
+- **[IR/IC]** Fix stale graphs in incremental builds when a replacing binding container's `@ContributesTo` annotation is removed and restored.
 - **[IR/native/circuit]** Fix an `IrLinkageError` in generated `SubCircuit` UI factories on Kotlin/Native with Kotlin `2.5.0-Beta1`.
 - **[FIR]** Fix accessor override status on Kotlin `2.5.0-dev-9169`.
 
@@ -39,6 +40,8 @@ Changelog
 Special thanks to the following contributors for contributing to this release!
 
 - [@agrosner](https://github.com/agrosner)
+- [@joshfriend](https://github.com/joshfriend)
+- [@kevinguitar](https://github.com/kevinguitar)
 
 ### [Consider sponsoring Metro's development](https://www.zacsweers.dev/sponsoring-metro/)
 

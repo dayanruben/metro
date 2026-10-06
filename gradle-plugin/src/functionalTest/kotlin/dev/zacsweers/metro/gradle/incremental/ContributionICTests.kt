@@ -877,6 +877,159 @@ class ContributionICTests(target: KmpTarget) : BaseIncrementalCompilationTest(ta
     buildAndAssertOutput()
   }
 
+  // https://github.com/ZacSweers/metro/pull/2908
+  @Test
+  fun bindingContainerReplacementDetectedWhenContributionIsCommentedOutAndRestored() {
+    val fixture =
+      object :
+        MetroProject(
+          multiplatform = target != KmpTarget.JVM,
+          additionalGradleProperties = listOf("kotlin.incremental.native=true"),
+        ) {
+        override fun buildGradleProject() = multiModuleProject {
+          root {
+            sources(appGraph, fakeProvider, main)
+            dependencies(implementation(":lib"))
+          }
+          subproject("lib") { sources(downloader, realProvider) }
+        }
+
+        override fun multiplatformTargetsBlock(): String {
+          val targetDeclaration =
+            when (target) {
+              KmpTarget.JVM -> "jvm()"
+              KmpTarget.JS,
+              KmpTarget.WASM_JS ->
+                """
+                ${target.gradleTargetName} {
+                  nodejs()
+                  binaries.executable()
+                }
+                """
+                  .trimIndent()
+              KmpTarget.NATIVE_HOST ->
+                "${target.gradleTargetName} { binaries.executable { entryPoint = \"test.main\" } }"
+            }
+          return "kotlin { $targetDeclaration }\n"
+        }
+
+        private val downloader =
+          source(
+            """
+            class Downloader(val tag: String)
+            """
+              .trimIndent()
+          )
+
+        private val realProvider =
+          source(
+            """
+            @ContributesTo(AppScope::class)
+            @BindingContainer
+            object RealProvider {
+              @Provides fun realDownloader(): Downloader = Downloader("real")
+            }
+            """
+              .trimIndent()
+          )
+
+        val fakeProviderContent =
+          """
+          @ContributesTo(AppScope::class, replaces = [RealProvider::class])
+          @BindingContainer
+          object FakeProvider {
+            @Provides fun fakeProvider(): Downloader = Downloader("fake")
+          }
+
+          // A second hint shares this source path without adding a dependency from AppGraph.
+          @ContributesTo(Unit::class)
+          interface UnusedContribution
+          """
+            .trimIndent()
+
+        val fakeProvider = source(fakeProviderContent)
+
+        private val appGraph =
+          source(
+            """
+            @DependencyGraph(AppScope::class)
+            interface AppGraph {
+              val downloader: Downloader
+            }
+            """
+              .trimIndent()
+          )
+
+        private val main =
+          source(
+            if (target == KmpTarget.JVM) {
+              "fun main(): String = createGraph<AppGraph>().downloader.tag"
+            } else {
+              """
+              fun main() {
+                println("metro-tag:${'$'}{createGraph<AppGraph>().downloader.tag}")
+              }
+              """
+                .trimIndent()
+            },
+            fileNameWithoutExtension = "Main",
+          )
+      }
+    val project = fixture.gradleProject
+    val compileTask =
+      if (target == KmpTarget.JVM) {
+        ":compileKotlin"
+      } else {
+        compileTaskFor()
+      }
+    val buildTask =
+      when (target) {
+        KmpTarget.JVM -> compileTask
+        KmpTarget.JS,
+        KmpTarget.WASM_JS -> ":${target.gradleTargetName}NodeDevelopmentRun"
+        KmpTarget.NATIVE_HOST ->
+          ":runDebugExecutable${target.gradleTargetName.replaceFirstChar { it.titlecase() }}"
+      }
+
+    fun buildAndAssertTag(expectedTag: String) {
+      val buildResult = project.compileKotlin(buildTask)
+      assertThat(buildResult.task(compileTask)?.outcome).isEqualTo(TaskOutcome.SUCCESS)
+      assertThat(buildResult.output).doesNotContain("Incremental compilation failed")
+      if (target == KmpTarget.JVM) {
+        val hintsDir = project.rootDir.resolve("build/classes/kotlin/main/metro/hints")
+        assertThat(hintsDir.resolve("TestUnusedContributionKotlin_UnitKt.class").isFile).isTrue()
+        assertThat(hintsDir.resolve("TestFakeProviderDev_zacsweers_metro_AppScopeKt.class").isFile)
+          .isEqualTo(expectedTag == "fake")
+        assertThat(project.invokeMain<String>(target = null)).isEqualTo(expectedTag)
+      } else {
+        assertThat(buildResult.output).contains("metro-tag:$expectedTag")
+      }
+    }
+
+    fun modifyFake(content: String) {
+      val sourceSet =
+        if (target == KmpTarget.JVM) {
+          "main"
+        } else {
+          "commonMain"
+        }
+      val updatedSource = source(content, fixture.fakeProvider.name, sourceSet = sourceSet)
+      project.rootDir
+        .resolve("src/$sourceSet/kotlin/test/FakeProvider.kt")
+        .writeText(updatedSource.source)
+    }
+
+    buildAndAssertTag("fake")
+
+    // Comment out the fake's contribution
+    modifyFake(fixture.fakeProviderContent.replaceFirst("@ContributesTo", "// @ContributesTo"))
+    buildAndAssertTag("real")
+
+    // Restore the contribution without touching the graph or provider bodies.
+    modifyFake(fixture.fakeProviderContent)
+    buildAndAssertTag("fake")
+  }
+
   @Test
   fun mapKeyArgumentChangeDetectedWhenOmittingRedundantMirrors() {
     assumeTrue(getTestCompilerToolingVersion() >= KotlinToolingVersion("2.4.0"))
