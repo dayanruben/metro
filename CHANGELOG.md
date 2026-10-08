@@ -25,11 +25,13 @@ Changelog
 - **[IR]** Include extension receivers in generated lambda function types, including set and map builder callbacks.
 - **[IR/IC]** Fix stale graphs in incremental builds when a replacing binding container's `@ContributesTo` annotation is removed and restored.
 - **[IR/native/circuit]** Fix an `IrLinkageError` in generated `SubCircuit` UI factories on Kotlin/Native with Kotlin `2.5.0-Beta1`.
-- **[FIR]** Fix accessor override status on Kotlin `2.5.0-dev-9169`.
+- **[FIR]** Fix accessor override status on Kotlin `2.5.0-dev-10106`.
+- **[IR]** Fix IR diagnostic reporting on Kotlin `2.5.0-dev-10106`.
+- **[compat]** Fix Kotlin `2.5.0-Beta1` selecting a compat implementation built for newer `2.5.0` dev builds. Kotlin Beta and RC releases now map to the dev compat implementation that matches their branch point.
 
 ### Changes
 
-- **[compat]** Test against Kotlin `2.5.0-dev-9169`.
+- **[compat]** Test against Kotlin `2.5.0-dev-10106`.
 - **[FIR/IR/IC]** Enable `omit-redundant-mirrors` by default on Kotlin 2.4.0 and newer to omit generated declaration mirrors when compiler metadata and declaration finders provide the same information. It remains disabled by default on older Kotlin versions. Disable it with `compilerOptions.disable("omit-redundant-mirrors")` in the `metro` DSL.
 - **[Gradle]** `enableTopLevelFunctionInjection` is **disabled by default** for now on **all** Kotlin versions because it makes incremental builds recompile more files. If you use top-level function injection, enable it with `enableTopLevelFunctionInjection.set(true)` in the `metro` DSL. See [incremental compilation perf docs](docs/performance.md#incremental-compilation).
 - Test Android Studio Rabbit 1 (`2026.2.1.8`).
