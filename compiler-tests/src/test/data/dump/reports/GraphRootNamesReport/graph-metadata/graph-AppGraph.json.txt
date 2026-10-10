@@ -61,6 +61,7 @@
     "enableGraphSharding": true,
     "keysPerGraphShard": 2000,
     "mergedSupertypeChunkSize": 0,
+    "multibindingGetterThreshold": 25,
     "enableSwitchingProviders": false,
     "publicScopedProviderSeverity": "NONE",
     "nonPublicContributionSeverity": "NONE",
@@ -147,7 +148,7 @@
     "shards": 0,
     "optimizations": {
       "bindingsPrunedByShrinking": 0,
-      "classConstructorDirectInvocations": 6,
+      "classConstructorDirectInvocations": 2,
       "classConstructorNewInstanceCalls": 0,
       "providerDirectInvocations": 0,
       "providerNewInstanceCalls": 0,

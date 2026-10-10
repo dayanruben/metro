@@ -58,6 +58,7 @@ import org.jetbrains.kotlin.ir.types.typeWith
 import org.jetbrains.kotlin.ir.util.allParameters
 import org.jetbrains.kotlin.ir.util.companionObject
 import org.jetbrains.kotlin.ir.util.defaultType
+import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.util.isObject
 import org.jetbrains.kotlin.ir.util.isSuspend
@@ -207,12 +208,18 @@ private constructor(
       }
 
       val bindingKind = binding.diagnosticTypeName
+      // The graph's own instance is always the receiver. A cached provider for it shouldn't be
+      // unwrapped to get there.
+      val isGraphInstanceRequest =
+        binding is BoundInstance &&
+          binding.typeKey == node.typeKey &&
+          accessType == AccessType.INSTANCE
       // If we're initializing the field for this key, don't ever try to reach for an existing
       // provider for it.
       // This is important for cases like DelegateFactory and breaking cycles.
-      if (
+      val canUseBindingProperty =
         !exactGraphDependencyRequest && (fieldInitKey == null || fieldInitKey != binding.typeKey)
-      ) {
+      if (canUseBindingProperty && !isGraphInstanceRequest) {
         bindingPropertyContext.get(contextualTypeKey)?.let { bindingProperty ->
           val storedKey = bindingProperty.storedKey
           val actual =
@@ -384,7 +391,9 @@ private constructor(
             .toTargetType(
               actual = AccessType.INSTANCE,
               contextualTypeKey = contextualTypeKey,
-              useInstanceFactory = false,
+              // A present value must be computed on each call, so it needs a lambda. An absent one
+              // is a constant that an InstanceFactory can hold.
+              useInstanceFactory = wrappedInstance == null,
               bindingKind = bindingKind,
             )
         }
@@ -716,7 +725,13 @@ private constructor(
           // 2. Parent/ancestor graph binding (token != null): accessed via property chain
           // TODO sealed subtypes for self-bindings
           val instanceExpr =
-            if (binding.token != null) {
+            if (
+              binding.token != null &&
+                binding.token.contextKey.typeKey == binding.token.ownerGraphKey
+            ) {
+              // An ancestor graph itself. Its instance is the end of the ancestor chain.
+              ancestorGraphAccess(binding.token.ownerGraphKey)
+            } else if (binding.token != null) {
               val parentContextKey = binding.contextualTypeKey
               // Check if the property is in the local context
               // If found locally, use simple property access; otherwise use resolveToken
@@ -731,8 +746,11 @@ private constructor(
               } else {
                 // Use resolveToken to build the property access chain through ancestors
                 val propertyAccess = resolveToken(binding.token)
-                propertyAccess.accessProperty(irGet(thisReceiver))
+                propertyAccess.accessProperty(tokenAccessBase())
               }
+            } else if (binding.typeKey == node.typeKey) {
+              // Self-binding. The graph provides itself.
+              graphInstanceAccess()
             } else {
               // Check if the property is in the local context (e.g., @Includes graph input
               // parameters that are stored as fields)
@@ -744,8 +762,7 @@ private constructor(
                   localProperty.shardIndex,
                 )
               } else {
-                // Self-binding - graph provides itself
-                irGet(thisReceiver)
+                graphInstanceAccess()
               }
             }
           when (accessType) {
@@ -846,7 +863,7 @@ private constructor(
             if (binding.token != null) {
               val propertyAccess = resolveToken(binding.token)
 
-              propertyAccess.accessProperty(irGet(thisReceiver)) to
+              propertyAccess.accessProperty(tokenAccessBase()) to
                 when {
                   propertyAccess.isSuspendProviderProperty -> AccessType.SUSPEND_PROVIDER
                   propertyAccess.isProviderProperty -> AccessType.PROVIDER
@@ -877,6 +894,11 @@ private constructor(
 
               if (binding.canPassThrough(contextualTypeKey)) {
                 return invokeGetter
+              }
+
+              // An instance request reads the value straight out of the accessor's wrapper.
+              if (accessType == AccessType.INSTANCE) {
+                return unwrapGraphDependencySource(invokeGetter, getterContextKey)
               }
 
               val sourceWrapper = getterContextKey.wrappedType
@@ -966,6 +988,16 @@ private constructor(
           val innerIrType = innerContextKey.toIrType()
           val innerExpression =
             when (wrappedType) {
+              is WrappedType.Provider if wrappedType.providerType == Symbols.ClassIds.function0 -> {
+                // A plain function needs no conversion before it's called.
+                val function0Invoke =
+                  irBuiltIns.functionN(0).functions.single { it.name == Symbols.Names.invoke }
+                irInvoke(
+                  dispatchReceiver = expression,
+                  callee = function0Invoke.symbol,
+                  typeHint = innerIrType,
+                )
+              }
               is WrappedType.Provider -> {
                 val metroProviderKey =
                   IrContextualTypeKey(
@@ -1372,8 +1404,17 @@ private constructor(
               contextualTypeKey.asCanonicalProviderKey(usesSuspendProvider = true)
             else -> contextualTypeKey.canonicalize()
           }
+        // The graph's own instance is the receiver, so skip any cached provider for it.
+        val isGraphInstanceRequest =
+          accessType == AccessType.INSTANCE && contextualTypeKey.typeKey == node.typeKey
+        val cachedProperty =
+          if (isGraphInstanceRequest) {
+            null
+          } else {
+            bindingPropertyContext.get(lookupKey)
+          }
         val providerInstance =
-          bindingPropertyContext.get(lookupKey)?.let { bindingProperty ->
+          cachedProperty?.let { bindingProperty ->
             val storedKey = bindingProperty.storedKey
             val propertyAccess = generatePropertyAccess(bindingProperty)
             val actualAccessType = AccessType.of(storedKey)
@@ -1474,7 +1515,8 @@ private constructor(
       property = bindingProperty.property,
       shardProperty = bindingProperty.shardProperty,
       ancestorChain = ancestorChain,
-      shardGraphProperty = shardContext?.graphProperty,
+      // A held graph value already covers the first hop. See tokenAccessBase().
+      shardGraphProperty = shardContext?.graphProperty.takeIf { shardContext?.graphValue == null },
       isProviderProperty = bindingProperty.storedKey.isWrappedInProvider,
       isSuspendProviderProperty = bindingProperty.storedKey.isWrappedInSuspendProvider,
     )
@@ -1485,14 +1527,67 @@ private constructor(
   private fun generatePropertyAccess(bindingProperty: BindingProperty): IrExpression {
     val ownerGraphKey = bindingProperty.ownerGraphKey
     if (ownerGraphKey != null) {
-      return resolveParentProperty(bindingProperty, ownerGraphKey)
-        .accessProperty(scope.irGet(thisReceiver))
+      return resolveParentProperty(bindingProperty, ownerGraphKey).accessProperty(tokenAccessBase())
     }
     return generatePropertyAccess(
       bindingProperty.property,
       bindingProperty.shardProperty,
       bindingProperty.shardIndex,
     )
+  }
+
+  /** Returns the receiver that [resolveToken] property chains start from. */
+  context(scope: IrBuilderWithScope)
+  private fun tokenAccessBase(): IrExpression {
+    val graphValue = shardContext?.graphValue ?: return scope.irGet(thisReceiver)
+    return scope.irGet(graphValue)
+  }
+
+  /** Reads the graph reference a shard or switching provider holds. */
+  context(scope: IrBuilderWithScope)
+  private fun shardGraphReference(context: ShardExpressionContext): IrExpression =
+    with(scope) {
+      context.graphValue?.let {
+        return irGet(it)
+      }
+      val graphProperty =
+        context.graphProperty
+          ?: reportCompilerBug(
+            "Shard ${context.currentShardIndex} requires graph access but has no graph property",
+          )
+      irGetProperty(irGet(thisReceiver), graphProperty)
+    }
+
+  /**
+   * Returns the instance of the graph this code belongs to.
+   *
+   * That's the receiver itself in the graph class. Shards and switching providers reach it through
+   * their graph property.
+   */
+  context(scope: IrBuilderWithScope)
+  private fun graphInstanceAccess(): IrExpression =
+    with(scope) {
+      val context = shardContext ?: return irGet(thisReceiver)
+      val graph = shardGraphReference(context)
+      val shardGraphProperty = context.shardGraphProperty
+      if (context.isSwitchingProvider && shardGraphProperty != null) {
+        // A switching provider inside a shard points at the shard. Hop from there to the graph.
+        irGetProperty(graph, shardGraphProperty)
+      } else {
+        graph
+      }
+    }
+
+  /** Returns the instance of the ancestor graph keyed by [ownerGraphKey]. */
+  context(scope: IrBuilderWithScope)
+  private fun ancestorGraphAccess(ownerGraphKey: IrTypeKey): IrExpression {
+    val ancestorChain =
+      shardContext?.ancestorGraphProperties?.get(ownerGraphKey)
+        ?: ancestorGraphProperties[ownerGraphKey]
+        ?: reportCompilerBug("No ancestor graph property chain found for $ownerGraphKey")
+    return ancestorChain.fold(graphInstanceAccess()) { receiver, property ->
+      scope.irGetProperty(receiver, property)
+    }
   }
 
   /**
@@ -1518,12 +1613,10 @@ private constructor(
       // Use thisReceiver (the function's dispatch receiver) not shardThisReceiver (class's
       // thisReceiver)
       fun graphAccess(): IrExpression {
-        val graphProperty =
-          shardContext?.graphProperty
-            ?: error(
-              "Shard ${shardContext?.currentShardIndex} requires graph access but has no graph property",
-            )
-        return irGetProperty(irGet(thisReceiver), graphProperty)
+        val context =
+          shardContext
+            ?: reportCompilerBug("Graph access requested outside of a shard or switching provider")
+        return shardGraphReference(context)
       }
 
       when {

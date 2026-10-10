@@ -1487,6 +1487,12 @@ public class FastInitBoxTestGenerated extends AbstractFastInitBoxTest {
     }
 
     @Test
+    @TestMetadata("IncludedGraphWithExtensionsIsStoredOnce.kt")
+    public void testIncludedGraphWithExtensionsIsStoredOnce() {
+      run("IncludedGraphWithExtensionsIsStoredOnce.kt");
+    }
+
+    @Test
     @TestMetadata("IncludedGraphsCanStillUseNonGraphs.kt")
     public void testIncludedGraphsCanStillUseNonGraphs() {
       run("IncludedGraphsCanStillUseNonGraphs.kt");
@@ -3740,6 +3746,12 @@ public class FastInitBoxTestGenerated extends AbstractFastInitBoxTest {
     @TestMetadata("PrimeMultibindingMapEnumKey.kt")
     public void testPrimeMultibindingMapEnumKey() {
       run("PrimeMultibindingMapEnumKey.kt");
+    }
+
+    @Test
+    @TestMetadata("SingleSourceMultibindingsAreReadOnly.kt")
+    public void testSingleSourceMultibindingsAreReadOnly() {
+      run("SingleSourceMultibindingsAreReadOnly.kt");
     }
 
     @Test

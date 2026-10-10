@@ -584,6 +584,13 @@ internal class Symbols(
       .single()
   }
 
+  /** `providerOf(value)`, which returns an already-boxed `InstanceFactory` as a `Provider`. */
+  val metroProviderOfFunction: IrSimpleFunctionSymbol by lazy {
+    builtinsFinder
+      .findFunctions(CallableId(metroRuntime.packageFqName, "providerOf".asName()))
+      .single()
+  }
+
   val providerInvoke: IrSimpleFunctionSymbol by lazy {
     metroProvider.requireSimpleFunction("invoke")
   }
@@ -743,6 +750,22 @@ internal class Symbols(
     builtinsFinder.findFunctions(CallableId(stdlib.packageFqName, "checkNotNull".asName())).single {
       it.owner.parameters.size == 2
     }
+  }
+
+  /** `providerAsFunction(provider)`. Only exists in the JS runtime. */
+  val providerAsFunction: IrSimpleFunctionSymbol? by lazy {
+    builtinsFinder
+      .findFunctions(CallableId(FqNames.metroRuntimeInternalPackage, "providerAsFunction".asName()))
+      .firstOrNull()
+  }
+
+  /** `suspendProviderAsFunction(provider)`. Only exists in the JS runtime. */
+  val suspendProviderAsFunction: IrSimpleFunctionSymbol? by lazy {
+    builtinsFinder
+      .findFunctions(
+        CallableId(FqNames.metroRuntimeInternalPackage, "suspendProviderAsFunction".asName()),
+      )
+      .firstOrNull()
   }
 
   val emptySet by lazy {

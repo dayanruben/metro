@@ -60,6 +60,7 @@
     "enableGraphSharding": true,
     "keysPerGraphShard": 2000,
     "mergedSupertypeChunkSize": 0,
+    "multibindingGetterThreshold": 25,
     "enableSwitchingProviders": false,
     "publicScopedProviderSeverity": "NONE",
     "nonPublicContributionSeverity": "NONE",
@@ -141,7 +142,7 @@
     "reachableKeys": 11,
     "deferredKeys": 0,
     "unusedInputs": 0,
-    "providerProperties": 4,
+    "providerProperties": 2,
     "scopedProviderProperties": 1,
     "shards": 0,
     "optimizations": {

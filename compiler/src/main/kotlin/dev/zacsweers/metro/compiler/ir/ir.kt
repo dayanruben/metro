@@ -99,6 +99,7 @@ import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrTypeParametersContainer
+import org.jetbrains.kotlin.ir.declarations.IrValueDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.ir.declarations.moduleDescriptor
@@ -111,14 +112,19 @@ import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
+import org.jetbrains.kotlin.ir.expressions.IrGetField
+import org.jetbrains.kotlin.ir.expressions.IrGetObjectValue
+import org.jetbrains.kotlin.ir.expressions.IrGetValue
 import org.jetbrains.kotlin.ir.expressions.IrMemberAccessExpression
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
+import org.jetbrains.kotlin.ir.expressions.IrTypeOperator
 import org.jetbrains.kotlin.ir.expressions.IrVararg
 import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImplWithShape
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetEnumValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrInstanceInitializerCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
 import org.jetbrains.kotlin.ir.overrides.isEffectivelyPrivate
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrConstructorSymbol
@@ -184,6 +190,8 @@ import org.jetbrains.kotlin.ir.util.primaryConstructor
 import org.jetbrains.kotlin.ir.util.properties
 import org.jetbrains.kotlin.ir.util.remapTypes
 import org.jetbrains.kotlin.ir.util.superClass
+import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
+import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.library.KOTLIN_JS_STDLIB_NAME
 import org.jetbrains.kotlin.load.java.JavaDescriptorVisibilities
 import org.jetbrains.kotlin.name.CallableId
@@ -434,7 +442,7 @@ internal fun IrBuilderWithScope.irInvoke(
   args: List<IrExpression?> = emptyList(),
 ): IrMemberAccessExpression<*> {
   assert(callee.isBound) { "Symbol $callee expected to be bound" }
-  val finalReceiverExpression =
+  val objectReceiverExpression =
     when {
       dispatchReceiver != null -> dispatchReceiver
       callee.owner.isStatic -> null
@@ -448,6 +456,40 @@ internal fun IrBuilderWithScope.irInvoke(
         }
       }
     }
+  // Calls to `@JvmStatic` object members can skip the object instance on JVM.
+  val staticCallee = jvmStaticCalleeOrNull(callee, objectReceiverExpression)
+  return irInvokeResolved(
+    finalReceiverExpression = if (staticCallee != null) null else objectReceiverExpression,
+    extensionReceiver = extensionReceiver,
+    callee = staticCallee ?: callee,
+    typeHint = typeHint,
+    typeArgs = typeArgs,
+    contextArgs = contextArgs,
+    args = args,
+  )
+}
+
+private fun IrBuilderWithScope.jvmStaticCalleeOrNull(
+  callee: IrFunctionSymbol,
+  receiver: IrExpression?,
+): IrFunctionSymbol? {
+  if (receiver !is IrGetObjectValue) return null
+  if (callee !is IrSimpleFunctionSymbol) return null
+  if (callee.owner.parent != receiver.symbol.owner) return null
+  val metroContext = context as? IrMetroContext ?: return null
+  val staticCallee = with(metroContext) { callee.jvmStaticOrSelf() }
+  return staticCallee.takeIf { it != callee }
+}
+
+private fun IrBuilderWithScope.irInvokeResolved(
+  finalReceiverExpression: IrExpression?,
+  extensionReceiver: IrExpression?,
+  callee: IrFunctionSymbol,
+  typeHint: IrType?,
+  typeArgs: List<IrType>?,
+  contextArgs: List<IrExpression?>?,
+  args: List<IrExpression?>,
+): IrMemberAccessExpression<*> {
 
   val call =
     when {
@@ -1059,11 +1101,29 @@ private fun IrBuilderWithScope.metroProviderReturning(
     ) {
       +irReturn(value())
     }
-  return irInvoke(
-    callee = context.metroSymbols.metroProviderFunction,
-    typeHint = valueType.wrapInProvider(context.metroSymbols.metroProvider),
-    typeArgs = listOf(valueType),
-    args = listOf(lambda),
+  return irLambdaAsMetroProvider(lambda, valueType)
+}
+
+/**
+ * Converts a lambda that Metro just built into a Metro `Provider<T>`.
+ *
+ * This is a plain SAM conversion. The runtime `provider()` function also checks whether its
+ * argument is already a `Provider`, which a fresh lambda never is. Skipping it avoids inlining that
+ * check and boxing the lambda in a second wrapper object.
+ */
+context(context: IrMetroContext)
+internal fun IrBuilderWithScope.irLambdaAsMetroProvider(
+  lambda: IrExpression,
+  valueType: IrType,
+): IrExpression {
+  val providerType = valueType.wrapInProvider(context.metroSymbols.metroProvider)
+  return IrTypeOperatorCallImpl(
+    startOffset = startOffset,
+    endOffset = endOffset,
+    type = providerType,
+    operator = IrTypeOperator.SAM_CONVERSION,
+    typeOperand = providerType,
+    argument = lambda,
   )
 }
 
@@ -2498,7 +2558,7 @@ internal fun IrClass.findInjectableConstructor(
   }
 }
 
-// InstanceFactory(...)
+// providerOf(...), or a primitive factory for primitives
 context(context: IrMetroContext)
 internal fun IrBuilderWithScope.instanceFactory(
   type: IrType,
@@ -2535,9 +2595,11 @@ internal fun IrBuilderWithScope.instanceFactory(
     }
   }
 
+  // providerOf() is a single top-level call that returns the boxed InstanceFactory. Calling
+  // InstanceFactory.invoke() directly would also load its companion and box the value class.
   return irInvoke(
-    irGetObject(context.metroSymbols.instanceFactoryCompanionObject),
-    callee = context.metroSymbols.instanceFactoryInvoke,
+    callee = context.metroSymbols.metroProviderOfFunction,
+    typeHint = type.wrapInProvider(context.metroSymbols.metroProvider),
     typeArgs = listOf(type),
     args = listOf(arg),
   )
@@ -2999,3 +3061,52 @@ fun DescriptorVisibility.isVisibleOutside() =
   this != DescriptorVisibilities.PRIVATE &&
     this != DescriptorVisibilities.PRIVATE_TO_THIS &&
     this != DescriptorVisibilities.INVISIBLE_FAKE
+
+/** Counts how many times anything inside this element reads [value]. */
+internal fun IrElement.countValueReads(value: IrValueDeclaration): Int {
+  var count = 0
+  transformChildrenVoid(
+    object : IrElementTransformerVoid() {
+      override fun visitGetValue(expression: IrGetValue): IrExpression {
+        if (expression.symbol == value.symbol) {
+          count++
+        }
+        return super.visitGetValue(expression)
+      }
+    },
+  )
+  return count
+}
+
+/** Replaces every read of [value] inside this element with the result of [replacement]. */
+internal fun IrElement.replaceValueReads(
+  value: IrValueDeclaration,
+  replacement: () -> IrExpression,
+) {
+  transformChildrenVoid(
+    object : IrElementTransformerVoid() {
+      override fun visitGetValue(expression: IrGetValue): IrExpression {
+        if (expression.symbol == value.symbol) {
+          return replacement()
+        }
+        return super.visitGetValue(expression)
+      }
+    },
+  )
+}
+
+/** Returns true if anything inside this element reads [field]. */
+internal fun IrElement.readsField(field: IrField): Boolean {
+  var found = false
+  transformChildrenVoid(
+    object : IrElementTransformerVoid() {
+      override fun visitGetField(expression: IrGetField): IrExpression {
+        if (expression.symbol == field.symbol) {
+          found = true
+        }
+        return super.visitGetField(expression)
+      }
+    },
+  )
+  return found
+}

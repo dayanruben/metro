@@ -217,6 +217,12 @@ public class IrDumpTestGenerated extends AbstractIrDumpTest {
     }
 
     @Test
+    @TestMetadata("IncludedGraphWithExtensionsIsStoredOnce.kt")
+    public void testIncludedGraphWithExtensionsIsStoredOnce() {
+      run("IncludedGraphWithExtensionsIsStoredOnce.kt");
+    }
+
+    @Test
     @TestMetadata("InitsAreChunked.kt")
     public void testInitsAreChunked() {
       run("InitsAreChunked.kt");
@@ -362,6 +368,12 @@ public class IrDumpTestGenerated extends AbstractIrDumpTest {
     public class Interop {
       private void run(String fileName) {
         runTest("compiler-tests/src/test/data/dump/ir/dependencygraph/interop/" + fileName);
+      }
+
+      @Test
+      @TestMetadata("AbsentOptionalProvidersUseInstanceFactory.kt")
+      public void testAbsentOptionalProvidersUseInstanceFactory() {
+        run("AbsentOptionalProvidersUseInstanceFactory.kt");
       }
 
       @Test
@@ -632,6 +644,12 @@ public class IrDumpTestGenerated extends AbstractIrDumpTest {
     @TestMetadata("InjectorFunctionsDoNotTriggerProviderGets.kt")
     public void testInjectorFunctionsDoNotTriggerProviderGets() {
       run("InjectorFunctionsDoNotTriggerProviderGets.kt");
+    }
+
+    @Test
+    @TestMetadata("LargeMultibindingsKeepGetters.kt")
+    public void testLargeMultibindingsKeepGetters() {
+      run("LargeMultibindingsKeepGetters.kt");
     }
 
     @Test
