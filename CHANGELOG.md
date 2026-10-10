@@ -67,6 +67,7 @@ Changelog
 Special thanks to the following contributors for contributing to this release!
 
 - [@agrosner](https://github.com/agrosner)
+- [@barq-al-layl](https://github.com/barq-al-layl)
 - [@joshfriend](https://github.com/joshfriend)
 - [@kevinguitar](https://github.com/kevinguitar)
 - [@wbonnefond](https://github.com/wbonnefond)
