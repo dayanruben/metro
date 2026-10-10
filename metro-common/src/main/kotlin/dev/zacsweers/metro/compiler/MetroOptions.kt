@@ -1111,6 +1111,21 @@ public enum class MetroOption(public val raw: RawMetroOption<*>) {
       allowMultipleOccurrences = false,
       valueMapper = String::toInt,
     ),
+  ),
+  DIAGNOSTIC_LEVEL(
+    RawMetroOption(
+      name = "diagnostic-level",
+      defaultValue = emptyMap(),
+      valueDescription =
+        "<DIAGNOSTIC_NAME>:<${MetroOptions.DiagnosticSeverity.levelNames.joinToString("|")}>[,...]",
+      description =
+        "Overrides the severity of Metro diagnostics, like `-Xwarning-level`. Accepts " +
+          "comma-separated entries and can be repeated. " +
+          "Only diagnostics reported in FIR are supported.",
+      required = false,
+      allowMultipleOccurrences = true,
+      valueMapper = ::parseDiagnosticLevel,
+    ),
   );
 
   public companion object {
@@ -1312,6 +1327,8 @@ public class MetroOptions(
     },
   public val maxGeneratedClassNameLength: Int =
     MetroOption.MAX_GENERATED_CLASS_NAME_LENGTH.raw.defaultValue.expectAs(),
+  public val diagnosticLevels: Map<String, DiagnosticSeverity> =
+    MetroOption.DIAGNOSTIC_LEVEL.raw.defaultValue.expectAs(),
 ) {
   @Transient
   public val providerTypes: Set<ClassId> = buildSet {
@@ -1582,6 +1599,8 @@ public class MetroOptions(
     public var interopAnnotationsNamedArgSeverity: DiagnosticSeverity =
       base.interopAnnotationsNamedArgSeverity
     public var unusedGraphInputsSeverity: DiagnosticSeverity = base.unusedGraphInputsSeverity
+    public var diagnosticLevels: MutableMap<String, DiagnosticSeverity> =
+      base.diagnosticLevels.toMutableMap()
     public var enabledLoggers: MutableSet<MetroLogger.Type> = base.enabledLoggers.toMutableSet()
     public var enableDaggerRuntimeInterop: Boolean = base.enableDaggerRuntimeInterop
     public var enableGuiceRuntimeInterop: Boolean = base.enableGuiceRuntimeInterop
@@ -2031,6 +2050,8 @@ public class MetroOptions(
           customContributesIntoSetAnnotations.addAll(value.expectAs<Set<ClassId>>())
         MetroOption.MAX_GENERATED_CLASS_NAME_LENGTH ->
           maxGeneratedClassNameLength = value.expectAs()
+        MetroOption.DIAGNOSTIC_LEVEL ->
+          diagnosticLevels.putAll(value.expectAs<Map<String, DiagnosticSeverity>>())
       }
     }
 
@@ -2122,6 +2143,7 @@ public class MetroOptions(
         enableRuntimeTracing = enableRuntimeTracing,
         memberNamingStrategy = memberNamingStrategy,
         maxGeneratedClassNameLength = maxGeneratedClassNameLength,
+        diagnosticLevels = diagnosticLevels,
       )
     }
 
@@ -2201,6 +2223,25 @@ public class MetroOptions(
         IDE_WARN -> if (isIde) WARN else NONE
         IDE_ERROR -> if (isIde) ERROR else NONE
       }
+
+    /** This severity's name in the `diagnostic-level` option, in the style of `-Xwarning-level`. */
+    public val levelName: String
+      get() =
+        when (this) {
+          NONE -> "disabled"
+          WARN -> "warning"
+          ERROR -> "error"
+          IDE_WARN -> "ide-warning"
+          IDE_ERROR -> "ide-error"
+        }
+
+    public companion object {
+      public val levelNames: List<String> = entries.map { it.levelName }
+
+      public fun fromLevelName(levelName: String): DiagnosticSeverity? {
+        return entries.firstOrNull { it.levelName == levelName }
+      }
+    }
   }
 }
 
@@ -2219,6 +2260,25 @@ internal object ClassIdSerializer : KSerializer<ClassId> {
 
 private inline fun <reified T : Any> Any.expectAs(): T {
   return this as? T ?: error("Expected $this to be of type ${T::class.qualifiedName}")
+}
+
+/** Parses a `diagnostic-level` value made of comma-separated `NAME:level` entries. */
+public fun parseDiagnosticLevel(value: String): Map<String, MetroOptions.DiagnosticSeverity> {
+  val levels = LinkedHashMap<String, MetroOptions.DiagnosticSeverity>()
+  for (entry in value.split(',')) {
+    val parts = entry.trim().split(":", limit = 2)
+    require(parts.size == 2 && parts[0].isNotBlank()) {
+      "Invalid diagnostic-level value '$entry'. Expected <DIAGNOSTIC_NAME>:<level>."
+    }
+    val (name, levelName) = parts
+    val severity =
+      requireNotNull(MetroOptions.DiagnosticSeverity.fromLevelName(levelName)) {
+        "Invalid diagnostic level '$levelName' for $name. Available values are: " +
+          MetroOptions.DiagnosticSeverity.levelNames.joinToString()
+      }
+    require(levels.put(name, severity) == null) { "diagnostic-level is duplicated for $name." }
+  }
+  return levels
 }
 
 private fun Any.diagnosticSeverity(): MetroOptions.DiagnosticSeverity {
