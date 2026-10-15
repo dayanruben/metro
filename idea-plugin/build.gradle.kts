@@ -355,7 +355,8 @@ intellijPlatform {
     hidden.set(
       propertyResolver
         .optionalStringProvider("intellijPlatformPublishingHidden")
-        .map(String::toBoolean),
+        .map(String::toBoolean)
+        .orElse(false),
     )
   }
 
