@@ -86,11 +86,27 @@ internal object MultibindsChecker : FirCallableDeclarationChecker(MppCheckerKind
 
     // Must check this early
     if (!annotations.isIntoMap && annotations.mapKey != null) {
-      reporter.reportOn(
-        annotations.mapKey.fir.source ?: source,
-        MetroDiagnostics.MULTIBINDS_ERROR,
-        "`@MapKey` annotations are only allowed on `@IntoMap` declarations.",
-      )
+      val mapKeySource = annotations.mapKey.fir.source ?: source
+      val isProvidesOrBinds = annotations.isProvides || annotations.isBinds
+      val isMultibinding = isMultibinds || isIntoSet || isElementsIntoSet
+      val isBindingDeclaration =
+        isProvidesOrBinds || isMultibinding || annotations.isBindsOptionalOf
+      if (isBindingDeclaration) {
+        reporter.reportOn(
+          mapKeySource,
+          MetroDiagnostics.MULTIBINDS_ERROR,
+          "`@MapKey` annotations are only allowed on `@IntoMap` declarations.",
+        )
+      } else {
+        // Another tool may read this key and generate the `@IntoMap` binding itself.
+        reporter.reportOn(
+          mapKeySource,
+          MetroDiagnostics.MAP_KEY_WITHOUT_INTO_MAP,
+          "`@MapKey` annotations are only allowed on `@IntoMap` declarations. If another tool " +
+            "binds this declaration into a map, lower this error with the `diagnostic-level` " +
+            "compiler option, like `MAP_KEY_WITHOUT_INTO_MAP:warning`.",
+        )
+      }
       return
     }
 

@@ -3080,6 +3080,12 @@ public class IrOnlyClassesBoxTestGenerated extends AbstractIrOnlyClassesBoxTest 
       }
 
       @Test
+      @TestMetadata("DaggerMapKeyOnPlainInterfaceAccessorWithLoweredDiagnostic.kt")
+      public void testDaggerMapKeyOnPlainInterfaceAccessorWithLoweredDiagnostic() {
+        run("DaggerMapKeyOnPlainInterfaceAccessorWithLoweredDiagnostic.kt");
+      }
+
+      @Test
       @TestMetadata("DaggerMemberInjectorCanBeLoaded.kt")
       public void testDaggerMemberInjectorCanBeLoaded() {
         run("DaggerMemberInjectorCanBeLoaded.kt");
@@ -3770,6 +3776,12 @@ public class IrOnlyClassesBoxTestGenerated extends AbstractIrOnlyClassesBoxTest 
     @TestMetadata("LazyMemberInjectedBindings.kt")
     public void testLazyMemberInjectedBindings() {
       run("LazyMemberInjectedBindings.kt");
+    }
+
+    @Test
+    @TestMetadata("MapKeyOnPlainInterfaceAccessorWithLoweredDiagnostic.kt")
+    public void testMapKeyOnPlainInterfaceAccessorWithLoweredDiagnostic() {
+      run("MapKeyOnPlainInterfaceAccessorWithLoweredDiagnostic.kt");
     }
 
     @Test
