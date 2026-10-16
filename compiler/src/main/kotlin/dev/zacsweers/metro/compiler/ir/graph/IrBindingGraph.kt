@@ -405,10 +405,10 @@ internal class IrBindingGraph(
   }
 
   /**
-   * Returns true if this graph would select the same binding as [childBinding].
+   * Returns true if this graph's declarations would give [childBinding]'s key the same binding.
    *
-   * A child can inherit a binding and override one of its dependencies. Reuse requires those
-   * dependencies to match too.
+   * This only reads bindings this graph has registered. It doesn't resolve anything, so it can run
+   * before seal() without reporting errors. Dependencies need their own check.
    */
   fun declaresSameBindingAs(childBinding: IrBinding): Boolean {
     val key = childBinding.typeKey
@@ -427,20 +427,8 @@ internal class IrBindingGraph(
           bindingLookup.getAvailableMultibindings()[key]?.sourceBindings ==
             childBinding.sourceBindings
         }
-      is IrBinding.Absent -> findBinding(key, allowLookup = true) == null
-      is IrBinding.CustomWrapper -> declaresSameWrapperAs(childBinding)
       else -> false
     }
-  }
-
-  private fun declaresSameWrapperAs(childBinding: IrBinding.CustomWrapper): Boolean {
-    val parentBinding =
-      findBinding(childBinding.typeKey, allowLookup = true) as? IrBinding.CustomWrapper
-        ?: return false
-    val sameWrapper =
-      parentBinding.wrapperKey == childBinding.wrapperKey &&
-        parentBinding.allowsAbsent == childBinding.allowsAbsent
-    return sameWrapper && parentBinding.wrappedContextKey == childBinding.wrappedContextKey
   }
 
   fun keep(key: IrContextualTypeKey, entry: IrBindingStack.Entry) {
@@ -604,11 +592,7 @@ internal class IrBindingGraph(
   }
 
   private fun dependencyBuildDepth(dependency: IrContextualTypeKey): Int {
-    val binding = realGraph.bindings[dependency.typeKey]
-    val isAbsent = binding == null || binding is IrBinding.Absent
-    if (dependency.hasDefault && isAbsent) {
-      return parentReader!!.sharedDepth(IrBinding.Absent(dependency.typeKey))
-    }
+    if (dependency.hasDefault) return 0
     // Dependencies sorted later, like ones that break a cycle, aren't recorded yet.
     return ancestorBuilds[dependency.typeKey]?.depth ?: 0
   }
