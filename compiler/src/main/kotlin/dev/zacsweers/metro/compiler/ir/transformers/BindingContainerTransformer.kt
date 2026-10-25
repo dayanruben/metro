@@ -800,7 +800,8 @@ internal class BindingContainerTransformer(
         targetFunction = reference.callee?.owner,
         signatureAnnotations = reference.annotations.takeIf { useCreatorSignatureCarrier },
         sourceMetroParameters = reference.parameters,
-        sourceParameters = reference.parameters.regularParameters.map { it.asValueParameter },
+        // Context dependencies become ordinary parameters on newInstance().
+        sourceParameters = reference.parameters.nonDispatchParameters.map { it.asValueParameter },
         sourceTypeParameters = reference.parent.owner,
         returnTypeProvider = { typeParameters ->
           val sourceClass = reference.parent.owner
@@ -831,11 +832,12 @@ internal class BindingContainerTransformer(
         } else {
           // Function call case
           val callParameters = parameters.filter { it.origin == Origins.RegularParameter }
+          // newInstance() parameters follow Kotlin's IR order.
           var index = 0
-          val extensionReceiver =
-            reference.parameters.extensionReceiverParameter?.let { irGet(callParameters[index++]) }
           val contextArgs =
             reference.parameters.contextParameters.map { irGet(callParameters[index++]) }
+          val extensionReceiver =
+            reference.parameters.extensionReceiverParameter?.let { irGet(callParameters[index++]) }
           val args = reference.parameters.regularParameters.map { irGet(callParameters[index++]) }
           irInvoke(
             dispatchReceiver = dispatchReceiver,

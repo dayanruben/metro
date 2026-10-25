@@ -3871,6 +3871,18 @@ public class IrOnlyClassesBoxTestGenerated extends AbstractIrOnlyClassesBoxTest 
     }
 
     @Test
+    @TestMetadata("ContextParameterProviderQualifiers.kt")
+    public void testContextParameterProviderQualifiers() {
+      run("ContextParameterProviderQualifiers.kt");
+    }
+
+    @Test
+    @TestMetadata("ContextParameterProviders.kt")
+    public void testContextParameterProviders() {
+      run("ContextParameterProviders.kt");
+    }
+
+    @Test
     @TestMetadata("DefaultValuesPropagateToNewInstanceParams.kt")
     public void testDefaultValuesPropagateToNewInstanceParams() {
       run("DefaultValuesPropagateToNewInstanceParams.kt");
@@ -3880,6 +3892,12 @@ public class IrOnlyClassesBoxTestGenerated extends AbstractIrOnlyClassesBoxTest 
     @TestMetadata("ExplicitlyPrivateProviderAnnotationsArePropagated.kt")
     public void testExplicitlyPrivateProviderAnnotationsArePropagated() {
       run("ExplicitlyPrivateProviderAnnotationsArePropagated.kt");
+    }
+
+    @Test
+    @TestMetadata("ExtensionReceiverProviders.kt")
+    public void testExtensionReceiverProviders() {
+      run("ExtensionReceiverProviders.kt");
     }
 
     @Test
@@ -3982,6 +4000,12 @@ public class IrOnlyClassesBoxTestGenerated extends AbstractIrOnlyClassesBoxTest 
     @TestMetadata("JvmFieldProvidersAreRespected.kt")
     public void testJvmFieldProvidersAreRespected() {
       run("JvmFieldProvidersAreRespected.kt");
+    }
+
+    @Test
+    @TestMetadata("PrivateExtensionPropertyProvidersInOtherModule.kt")
+    public void testPrivateExtensionPropertyProvidersInOtherModule() {
+      run("PrivateExtensionPropertyProvidersInOtherModule.kt");
     }
 
     @Test
