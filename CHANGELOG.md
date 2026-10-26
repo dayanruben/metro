@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+1.5.0
+-----
+
+_2026-10-26_
+
 ### New
 
 - **[metrox-viewmodel-compose]** Add support for `linuxX64`.
