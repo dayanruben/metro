@@ -4,6 +4,11 @@ Changelog
 **Unreleased**
 --------------
 
+1.5.1
+-----
+
+_2026-10-29_
+
 ### Fixes
 
 - **[IR/IC]** Avoid recompiling unrelated files in the graph module when the constructor of an upstream `@Contributes*` class changes.
