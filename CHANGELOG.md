@@ -6,9 +6,14 @@ Changelog
 
 ### Fixes
 
-
 - **[IR/IC]** Avoid recompiling unrelated files in the graph module when the constructor of an upstream `@Contributes*` class changes.
 - **[Gradle]** Fix false hidden-dependency reports for contributions from associated compilations, such as main sources in tests. This particularly affects KMP.
+
+### Changes
+
+- Update shaded wire version in the compiler to `7.1.2`.
+
+### [Consider sponsoring Metro's development](https://www.zacsweers.dev/sponsoring-metro/)
 
 1.5.0
 -----
